@@ -5,7 +5,7 @@ class AppWidget {
     return TextStyle(
       color: Color(0xFF0D7A8A),
       fontSize: textsize,
-      fontWeight: FontWeight.bold,
+      fontWeight: FontWeight.w400,
     );
   }
 }
