@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quick_parcel/coustomer/homepage.dart';
 
 class BottomNav extends StatefulWidget {
-  const BottomNav({Key? key}) : super(key: key);
+  const BottomNav({super.key});
 
   @override
   State<BottomNav> createState() => _BottomNavState();
@@ -106,7 +106,7 @@ class _BottomNavState extends State<BottomNav> {
 
 // Placeholder Screens (আপনি পরে এগুলো replace করবেন)
 class TrackingScreen extends StatelessWidget {
-  const TrackingScreen({Key? key}) : super(key: key);
+  const TrackingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +122,7 @@ class TrackingScreen extends StatelessWidget {
 }
 
 class PackagesScreen extends StatelessWidget {
-  const PackagesScreen({Key? key}) : super(key: key);
+  const PackagesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +138,7 @@ class PackagesScreen extends StatelessWidget {
 }
 
 class WalletScreen extends StatelessWidget {
-  const WalletScreen({Key? key}) : super(key: key);
+  const WalletScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

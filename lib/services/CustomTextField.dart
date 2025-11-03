@@ -12,7 +12,7 @@ class CustomTextField extends StatefulWidget {
   final int maxLines;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.label,
     required this.hint,
     required this.prefixIcon,
@@ -21,7 +21,7 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType,
     this.isPassword = false,
     this.maxLines = 1,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();

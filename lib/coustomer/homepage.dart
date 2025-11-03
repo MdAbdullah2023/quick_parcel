@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -105,31 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    // QR Code Icon
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white,
-                          size: 26,
-                        ),
-                        onPressed: () {
-                          // QR Scanner functionality
-                        },
-                      ),
-                    ),
                   ],
                 ),
 
                 const SizedBox(height: 25),
 
-                // Track Package Card
+                // Track Package
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -231,8 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
-          // Menu Grid
         ],
       ),
     );
