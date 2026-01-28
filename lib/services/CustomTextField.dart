@@ -35,8 +35,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label, style: AppWidget.GreenTextfeildStyle(23.0)),
-        const SizedBox(height: 8),
+        Text(widget.label, style: AppWidget.GreenTextfeildStyle(20.0)),
+        const SizedBox(height: 5),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -76,8 +76,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   : null,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
+                horizontal: 10,
+                vertical: 10,
               ),
             ),
           ),

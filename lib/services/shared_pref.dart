@@ -1,4 +1,3 @@
-// lib/services/shared_pref.dart
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedpreferenceHelper {
@@ -6,45 +5,57 @@ class SharedpreferenceHelper {
   static const String _userNameKey = "USER_NAME";
   static const String _userEmailKey = "USER_EMAIL";
 
-  // 🔹 Save user ID
+  // save user ID
   Future<void> saveUserId(String id) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userIdKey, id);
   }
 
-  // 🔹 Save user name
+  // save user name
   Future<void> saveUserName(String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userNameKey, name);
   }
 
-  // 🔹 Save user email
+  // save user email
   Future<void> saveUserEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userEmailKey, email);
   }
 
-  // 🔹 Get user ID
+  // get user ID
   Future<String?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userIdKey);
   }
 
-  // 🔹 Get user name
+  // get user name
   Future<String?> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userNameKey);
   }
 
-  // 🔹 Get user email
+  // get user email
   Future<String?> getUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userEmailKey);
   }
 
-  // 🔹 Clear all user data (Logout case)
+  // clear all user data
   Future<void> clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+
+  static String userProfileUrlKey = "USERPROFILEURLKEY";
+
+  Future<bool> saveUserProfileUrl(String userProfileUrl) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.setString(userProfileUrlKey, userProfileUrl);
+  }
+
+  Future<String?> getUserProfileUrl() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString(userProfileUrlKey);
   }
 }

@@ -11,18 +11,14 @@ class BottomNav extends StatefulWidget {
 class _BottomNavState extends State<BottomNav> {
   int _selectedIndex = 0;
 
-  // Screens list
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const TrackingScreen(),
-    const PackagesScreen(),
-    const WalletScreen(),
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    TrackingScreen(),
+    PackagesScreen(),
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -55,46 +51,45 @@ class _BottomNavState extends State<BottomNav> {
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.white,
             selectedItemColor: const Color(0xFF0D7D8F),
-            unselectedItemColor: Colors.grey[400],
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
+            unselectedItemColor: Colors.grey,
             showSelectedLabels: false,
             showUnselectedLabels: false,
             elevation: 0,
             items: [
               BottomNavigationBarItem(
-                icon: Icon(
-                  _selectedIndex == 0 ? Icons.home : Icons.home_outlined,
-                  size: 28,
-                ),
+                icon: Icon(Icons.home_outlined, size: 40),
+                activeIcon: Icon(Icons.home, size: 40),
                 label: 'Home',
               ),
               BottomNavigationBarItem(
-                icon: Icon(
-                  _selectedIndex == 1
-                      ? Icons.location_on
-                      : Icons.location_on_outlined,
-                  size: 28,
+                icon: Image.asset(
+                  'images/live_traking.png',
+                  height: 34,
+                  width: 34,
+                  color: Colors.grey,
+                ),
+                activeIcon: Image.asset(
+                  'images/live_traking.png',
+                  height: 34,
+                  width: 34,
+                  color: const Color(0xFF0D7D8F),
                 ),
                 label: 'Tracking',
               ),
               BottomNavigationBarItem(
-                icon: Icon(
-                  _selectedIndex == 2
-                      ? Icons.inventory_2
-                      : Icons.inventory_2_outlined,
-                  size: 28,
+                icon: Image.asset(
+                  'images/my_package.png',
+                  height: 34,
+                  width: 34,
+                  color: Colors.grey,
+                ),
+                activeIcon: Image.asset(
+                  'images/my_package.png',
+                  height: 34,
+                  width: 34,
+                  color: const Color(0xFF0D7D8F),
                 ),
                 label: 'Packages',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(
-                  _selectedIndex == 3
-                      ? Icons.account_balance_wallet
-                      : Icons.account_balance_wallet_outlined,
-                  size: 28,
-                ),
-                label: 'Wallet',
               ),
             ],
           ),
@@ -104,7 +99,7 @@ class _BottomNavState extends State<BottomNav> {
   }
 }
 
-// Placeholder Screens (আপনি পরে এগুলো replace করবেন)
+// screens
 class TrackingScreen extends StatelessWidget {
   const TrackingScreen({super.key});
 
@@ -130,22 +125,6 @@ class PackagesScreen extends StatelessWidget {
       body: Center(
         child: Text(
           'Packages Screen',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-}
-
-class WalletScreen extends StatelessWidget {
-  const WalletScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text(
-          'Biling Screen',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
       ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:quick_parcel/coustomer/sendPackage.dart';
+import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
+import 'package:quick_parcel/services/widget_support.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,9 +12,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _trackingController = TextEditingController();
-  String userName = '';
+  final TextEditingController _trackingController = TextEditingController();
+
+  String userName = 'User';
   String userType = 'Customer';
+  String? profileImageUrl;
+  bool _loadingProfile = true;
 
   @override
   void initState() {
@@ -20,11 +26,76 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadUserInfo() async {
-    final helper = SharedpreferenceHelper();
-    final name = await helper.getUserName();
-    setState(() {
-      userName = name ?? 'User';
-    });
+    try {
+      final helper = SharedpreferenceHelper();
+      final name = await helper.getUserName();
+      final userId = await helper.getUserId();
+
+      if (mounted) {
+        setState(() {
+          userName = name ?? 'User';
+        });
+      }
+
+      if (userId != null) {
+        final doc = await DatabaseMethods().getUserDetail(userId);
+        if (doc.exists && mounted) {
+          setState(() {
+            profileImageUrl = doc.data()?['PhotoUrl'];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading user info: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loadingProfile = false);
+      }
+    }
+  }
+
+  // profile pic
+  Widget _buildProfilePicture() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: _loadingProfile
+            ? const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(Color(0xFF0D7D8F)),
+                  ),
+                ),
+              )
+            : (profileImageUrl != null && profileImageUrl!.isNotEmpty)
+            ? Image.network(
+                profileImageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.person,
+                  size: 35,
+                  color: Color(0xFF0D7D8F),
+                ),
+              )
+            : const Icon(Icons.person, size: 35, color: Color(0xFF0D7D8F)),
+      ),
+    );
   }
 
   @override
@@ -39,50 +110,35 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Header Section
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF0D7D8F),
-                  const Color(0xFF0D7D8F).withOpacity(0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Material(
+            elevation: 3,
+            borderRadius: BorderRadius.circular(30),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF0D7D8F),
+                    const Color(0xFF0D7D8F).withOpacity(0.85),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
               ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              ),
-            ),
-            child: Column(
-              children: [
-                SizedBox(height: 30),
-                // Profile Row
-                Row(
-                  children: [
-                    // Profile Picture
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
+              child: Column(
+                children: [
+                  const SizedBox(height: 30),
+                  Row(
+                    children: [
+                      // profile pic
+                      GestureDetector(
+                        onTap: () {},
+                        child: _buildProfilePicture(),
                       ),
-                      child: ClipOval(
-                        child: Icon(
-                          Icons.person,
-                          size: 35,
-                          color: const Color(0xFF0D7D8F),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    // Name and Type
-                    Expanded(
-                      child: Column(
+                      const SizedBox(width: 15),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -99,117 +155,122 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
                               fontSize: 15,
-                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 25),
-
-                // Track Package
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Track your package',
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 25),
+
+                  //search track
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Track your package',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Enter your package tracking number',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      // Search Field
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
+                        const SizedBox(height: 6),
+                        Text(
+                          'Enter your package tracking number',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 15),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5F7),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: TextField(
+                                  controller: _trackingController,
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: 'Tracking number',
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              height: 52,
+                              width: 52,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE8F5F7),
+                                color: Color(0xFF0D7D8F),
                                 borderRadius: BorderRadius.circular(15),
                               ),
-                              child: TextField(
-                                controller: _trackingController,
-                                decoration: InputDecoration(
-                                  hintText: 'Enter tracking number',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 15,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 16,
-                                  ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.search,
+                                  color: Colors.white,
                                 ),
+                                onPressed: () {},
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Search Button
-                          Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF4CAF50),
-                                  const Color(0xFF45A049),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF4CAF50,
-                                  ).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.search,
-                                color: Colors.white,
-                                size: 26,
-                              ),
-                              onPressed: () {
-                                // Track package functionality
-                                if (_trackingController.text.isNotEmpty) {
-                                  // Navigate to tracking details
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          ),
+
+          // menu
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                children: [
+                  AppWidget.HomePagebuildMenuCard(
+                    imagePath: 'images/send_package.png',
+                    label: 'Send package',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SendPackage()),
+                      );
+                    },
+                  ),
+
+                  AppWidget.HomePagebuildMenuCard(
+                    imagePath: 'images/my_package.png',
+                    label: 'My package',
+                    onTap: () {},
+                  ),
+
+                  AppWidget.HomePagebuildMenuCard(
+                    imagePath: 'images/live_traking.png',
+                    label: 'Live tracking',
+                    onTap: () {},
+                  ),
+
+                  AppWidget.HomePagebuildMenuCard(
+                    imagePath: 'images/billing.png',
+                    label: 'Billing',
+                    onTap: () {},
+                  ),
+                ],
+              ),
             ),
           ),
         ],

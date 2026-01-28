@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:quick_parcel/coustomer/bottomnav.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:quick_parcel/coustomer/forgot_password.dart';
 import 'package:quick_parcel/services/CustomTextField.dart';
 import 'package:quick_parcel/services/widget_support.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
@@ -150,52 +151,56 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _resetPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter your email to reset password')),
-      );
-      return;
-    }
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.green,
-          content: Text('Password reset link sent to email.'),
-        ),
-      );
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red,
-          content: Text(e.message ?? 'Failed to send reset email'),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D7D8F),
       body: Column(
         children: [
-          const SizedBox(height: 220),
-          Container(
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: const Text(
-              'Log in',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 60,
-                fontWeight: FontWeight.w500,
-              ),
+          SizedBox(height: 30),
+          SizedBox(
+            height: 200,
+            child: Image.asset(
+              "images/51374-removebg-preview.png",
+              fit: BoxFit.contain,
             ),
           ),
-          const SizedBox(height: 40),
+
+          Container(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Login',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 48,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Welcome Back',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                Text(
+                  'Your Parcel are waiting',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           Expanded(
             child: Container(
               width: double.infinity,
@@ -207,15 +212,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(30),
+                padding: const EdgeInsets.all(40),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 20),
-
-                      // Email Field 👇
+                      // Email Field
                       CustomTextField(
                         label: 'Email',
                         hint: 'Enter your email',
@@ -231,9 +234,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 15),
 
-                      // Password Field 👇
+                      // Password Field
                       CustomTextField(
                         label: 'Password',
                         hint: 'Enter your password',
@@ -247,16 +250,34 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: _resetPassword,
-                          child: const Text('Forgot password?'),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPassword(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Forgot password?',
+                            style: AppWidget.GreenTextfeildStyle(14),
+                          ),
                         ),
                       ),
 
-                      const SizedBox(height: 8),
                       Center(
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width / 1.5,
-                          height: 56,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width / 1.8,
+                          height: 45,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0D7D8F).withOpacity(0.4),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
                           child: ElevatedButton(
                             onPressed: _loading ? null : _signInWithEmail,
                             style: ElevatedButton.styleFrom(
@@ -264,7 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              elevation: 4,
+                              elevation: 0, 
                             ),
                             child: _loading
                                 ? const SizedBox(
@@ -299,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(
@@ -314,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               'Or Log in with',
                               style: TextStyle(
                                 color: Color(0xFF0D7D8F),
-                                fontSize: 18,
+                                fontSize: 15,
                               ),
                             ),
                           ),
@@ -327,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 15),
                       Row(
                         children: [
                           Expanded(
@@ -348,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+                                  vertical: 12,
                                 ),
                                 side: BorderSide(
                                   color: const Color(
@@ -365,7 +386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // TODO: Implement Facebook login
+                                //  fb login
                               },
                               icon: const FaIcon(
                                 FontAwesomeIcons.facebook,
@@ -382,7 +403,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+                                  vertical: 12,
                                 ),
                                 side: BorderSide(
                                   color: const Color(
@@ -398,7 +419,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 15),
                       Center(
                         child: RichText(
                           text: TextSpan(

@@ -165,46 +165,47 @@ class _SignUpScreenState extends State<SignUpScreen> {
       backgroundColor: const Color(0xFF0D7D8F),
       body: Column(
         children: [
-          Expanded(
-            child: Container(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 40),
-                  const Text(
-                    'Sign up',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 48,
-                      fontWeight: FontWeight.w600,
-                    ),
+          const SizedBox(height: 50),
+          Image.asset("images/signup.png"),
+
+          Container(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                const Text(
+                  'Sign up',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 48,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Join Quick Parcel',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Join Quick Parcel',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
                   ),
-                  Text(
-                    'Faster deliveries start here',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w300,
-                    ),
+                ),
+                Text(
+                  'Faster deliveries start here',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 40),
           Expanded(
-            flex: 2,
             child: Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -221,9 +222,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 5),
-
-                      // Name Field 👇
+                      // Name Field
                       CustomTextField(
                         label: 'Name',
                         hint: 'Enter your name',
@@ -236,7 +235,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Phone Field 👇
+                      // Phone Field
                       CustomTextField(
                         label: 'Phone Number',
                         hint: 'Enter your phone number',
@@ -253,7 +252,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Email Field 👇
+                      // Email Field
                       CustomTextField(
                         label: 'Email',
                         hint: 'Enter your email',
@@ -271,7 +270,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Password Field 👇
+                      // Password Field
                       CustomTextField(
                         label: 'Password',
                         hint: 'Enter your password',
@@ -288,7 +287,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Confirm Password Field 👇
+                      // Confirm Password Field
                       CustomTextField(
                         label: 'Re-enter password',
                         hint: 'Confirm password',
@@ -338,7 +337,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ),
                                   recognizer: TapGestureRecognizer()
                                     ..onTap = () {
-                                      // open terms screen/url
+                                      //  terms screen/url
                                     },
                                 ),
                               ],
@@ -352,8 +351,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // Sign Up Button
                       Center(
                         child: SizedBox(
-                          width: MediaQuery.of(context).size.width / 1.5,
-                          height: 56,
+                          width: MediaQuery.of(context).size.width / 1.8,
+                          height: 45,
                           child: ElevatedButton(
                             onPressed: _loading ? null : _handleSignUp,
                             style: ElevatedButton.styleFrom(
@@ -399,7 +398,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Sign In Link
+                      // Sign In
                       Center(
                         child: RichText(
                           text: TextSpan(
