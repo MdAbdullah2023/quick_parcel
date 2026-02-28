@@ -5,10 +5,35 @@ plugins {
   id("com.google.gms.google-services") version "4.4.4" apply false
 
 }
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    
+    tasks.withType<JavaCompile>().configureEach {
+        sourceCompatibility = JavaVersion.VERSION_17.toString()
+        targetCompatibility = JavaVersion.VERSION_17.toString()
+        options.encoding = "UTF-8"
+        options.compilerArgs.addAll(listOf(
+            "-Xlint:-deprecation",
+            "-Xlint:-options",
+            "-Xlint:-removal"
+        ))
+    }
+}
+
+subprojects {
+    tasks.withType<JavaCompile>().configureEach {
+        sourceCompatibility = JavaVersion.VERSION_17.toString()
+        targetCompatibility = JavaVersion.VERSION_17.toString()
+        options.encoding = "UTF-8"
+        options.compilerArgs.addAll(listOf(
+            "-Xlint:-deprecation",
+            "-Xlint:-options",
+            "-Xlint:-removal"
+        ))
     }
 }
 
