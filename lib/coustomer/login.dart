@@ -45,20 +45,31 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final helper = SharedpreferenceHelper();
-      final customId = await helper.getUserId();
+      final firebaseUid = cred.user?.uid ?? '';
+      final email = cred.user?.email ?? _emailController.text.trim();
 
-      if (customId != null) {
-        final doc = await DatabaseMethods().getUserDetail(customId);
-        if (doc.exists) {
-          await helper.saveUserName(doc.data()?['Name'] ?? '');
-          await helper.saveUserEmail(
-            doc.data()?['Email'] ?? cred.user?.email ?? '',
-          );
+      String? resolvedUserDocId;
+      Map<String, dynamic>? resolvedUserData;
+
+      if (firebaseUid.isNotEmpty) {
+        final byUid = await DatabaseMethods().getUserByFirebaseUid(firebaseUid);
+        if (byUid.docs.isNotEmpty) {
+          resolvedUserDocId = byUid.docs.first.id;
+          resolvedUserData = byUid.docs.first.data();
         }
-      } else {
-        await helper.saveUserId(cred.user?.uid ?? '');
-        await helper.saveUserEmail(cred.user?.email ?? '');
       }
+
+      if (resolvedUserDocId == null && email.isNotEmpty) {
+        final byEmail = await DatabaseMethods().getUserByEmail(email);
+        if (byEmail.docs.isNotEmpty) {
+          resolvedUserDocId = byEmail.docs.first.id;
+          resolvedUserData = byEmail.docs.first.data();
+        }
+      }
+
+      await helper.saveUserId(resolvedUserDocId ?? firebaseUid);
+      await helper.saveUserEmail(resolvedUserData?['Email'] ?? email);
+      await helper.saveUserName(resolvedUserData?['Name'] ?? '');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

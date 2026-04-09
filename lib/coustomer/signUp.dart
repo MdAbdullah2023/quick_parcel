@@ -20,6 +20,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
+  final _nidController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -31,6 +32,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _nidController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -85,6 +87,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'Id': customId,
         'FirebaseUid': credential.user?.uid ?? '',
         'Name': _nameController.text.trim(),
+        'NID': _nidController.text.trim(),
         'Email': _emailController.text.trim(),
         'Phone': _phoneController.text.trim(),
         'CreatedAt': DateTime.now().toIso8601String(),
@@ -231,6 +234,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Please enter your name'
                             : null,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // NID Number Field
+                      CustomTextField(
+                        label: 'NID Number',
+                        hint: 'Enter your NID number',
+                        prefixIcon: Icons.badge_outlined,
+                        controller: _nidController,
+                        keyboardType: TextInputType.number,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Enter NID number';
+                          if (value.length < 10) return 'Invalid NID number';
+                          return null;
+                        },
                       ),
 
                       const SizedBox(height: 12),

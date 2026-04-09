@@ -29,6 +29,34 @@ class DatabaseMethods {
     }
   }
 
+  Future<QuerySnapshot<Map<String, dynamic>>> getUserByFirebaseUid(
+    String firebaseUid,
+  ) async {
+    try {
+      return await _firestore
+          .collection('users')
+          .where('FirebaseUid', isEqualTo: firebaseUid)
+          .limit(1)
+          .get();
+    } catch (e) {
+      print('Error fetching user by FirebaseUid: $e');
+      rethrow;
+    }
+  }
+
+  Future<QuerySnapshot<Map<String, dynamic>>> getUserByEmail(String email) async {
+    try {
+      return await _firestore
+          .collection('users')
+          .where('Email', isEqualTo: email)
+          .limit(1)
+          .get();
+    } catch (e) {
+      print('Error fetching user by email: $e');
+      rethrow;
+    }
+  }
+
   // Update user data
   Future<void> updateUserDetail(
     String id,
@@ -72,5 +100,15 @@ class DatabaseMethods {
         .collection("Order")
         .doc(id)
         .set(userInfoMap);
+  }
+
+  // Stream of all orders for a user (real-time)
+  Stream<QuerySnapshot> getUserOrders(String userId) {
+    return FirebaseFirestore.instance
+        .collection("users")
+        .doc(userId)
+        .collection("Order")
+        .orderBy("CreatedAt", descending: true)
+        .snapshots();
   }
 }

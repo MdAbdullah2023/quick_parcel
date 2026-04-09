@@ -2,9 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:quick_parcel/coustomer/login.dart';
+import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/google_places_service.dart';
+import 'package:quick_parcel/services/shared_pref.dart';
+import 'package:quick_parcel/services/widget_support.dart';
 import 'package:uuid/uuid.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SendPackage extends StatefulWidget {
   const SendPackage({super.key});
@@ -24,74 +28,19 @@ class _SendPackageState extends State<SendPackage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Heading
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 20,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.local_shipping,
-                      color: const Color(0xFF0D7D8F),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Send Packages',
-                      style: TextStyle(
-                        color: const Color(0xFF0D7D8F),
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+              SendPackageWidgets.buildSectionHeader(
+                title: 'Manage Parcels',
+                icon: Icons.local_shipping,
               ),
 
-              // Search Bar - "Deliver to?"
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GestureDetector(
-                  onTap: () => _showLocationPicker(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: const Color(0xFF0D7D8F).withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search,
-                          color: const Color(0xFF0D7D8F),
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Deliver to?',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              // Search Bar
+              SendPackageWidgets.buildSearchBar(
+                onTap: () => _showLocationPicker(context),
               ),
 
               const SizedBox(height: 30),
 
-              // Types of deliveries
+              // types of deliveries
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
@@ -112,7 +61,7 @@ class _SendPackageState extends State<SendPackage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: _buildDeliveryTypeCard(
+                      child: SendPackageWidgets.buildDeliveryTypeCard(
                         imagePath: 'images/send_package.png',
                         title: 'Send items',
                         onTap: () =>
@@ -121,7 +70,7 @@ class _SendPackageState extends State<SendPackage> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildDeliveryTypeCard(
+                      child: SendPackageWidgets.buildDeliveryTypeCard(
                         imagePath: 'images/my_package.png',
                         title: 'Receive items',
                         onTap: () =>
@@ -169,7 +118,7 @@ class _SendPackageState extends State<SendPackage> {
                     const SizedBox(height: 24),
 
                     // Save yourself a trip across town
-                    _buildPopularWaysSection(
+                    SendPackageWidgets.buildPopularWaysSection(
                       title: 'Save yourself a trip across town',
                       items: [
                         {
@@ -207,7 +156,7 @@ class _SendPackageState extends State<SendPackage> {
                     const SizedBox(height: 24),
 
                     // Deliver items for your business
-                    _buildPopularWaysSection(
+                    SendPackageWidgets.buildPopularWaysSection(
                       title: 'Deliver items for your business',
                       items: [
                         {
@@ -233,146 +182,6 @@ class _SendPackageState extends State<SendPackage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDeliveryTypeCard({
-    required String imagePath,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFF0D7D8F).withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              child: Container(
-                height: 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [const Color(0xFFE8F5F7), const Color(0xFFD0EAEF)],
-                  ),
-                ),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: const Color(0xFFE8F5F7),
-                      child: Icon(
-                        title.contains('Send')
-                            ? Icons.upload_outlined
-                            : Icons.download_outlined,
-                        size: 60,
-                        color: const Color(0xFF0D7D8F),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            // Title with arrow
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF0D7D8F),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward,
-                    color: Color(0xFF0D7D8F),
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPopularWaysSection({
-    required String title,
-    required List<Map<String, dynamic>> items,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5F7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF0D7D8F).withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFF0D7D8F),
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: items.map((item) {
-              return _buildPopularItem(
-                icon: item['icon'] as IconData,
-                label: item['label'] as String,
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPopularItem({required IconData icon, required String label}) {
-    return SizedBox(
-      width: 130,
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF0D7D8F), size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -668,7 +477,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         return;
       }
 
-      // Step 3: Try to get current position with improved fallback strategy
       Position? position;
 
       // Prime attempt: Try using position stream for better accuracy
@@ -1533,6 +1341,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           pickupLocation: _pickupLocation!,
           dropoffLocation: _dropoffLocation!,
           pickupTime: selectedPickupTime ?? 'Pick up now',
+          isSending: widget.isSending,
         ),
       ),
     );
@@ -1544,12 +1353,14 @@ class PackageDetailsScreen extends StatefulWidget {
   final SelectedLocation pickupLocation;
   final SelectedLocation dropoffLocation;
   final String pickupTime;
+  final bool isSending;
 
   const PackageDetailsScreen({
     super.key,
     required this.pickupLocation,
     required this.dropoffLocation,
     required this.pickupTime,
+    this.isSending = true,
   });
 
   @override
@@ -1560,9 +1371,11 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   final GooglePlacesService _placesService = GooglePlacesService();
   final TextEditingController senderNameController = TextEditingController();
   final TextEditingController senderPhoneController = TextEditingController();
+  final TextEditingController senderNidController = TextEditingController();
   final TextEditingController recipientNameController = TextEditingController();
   final TextEditingController recipientPhoneController =
       TextEditingController();
+  final TextEditingController recipientNidController = TextEditingController();
   final TextEditingController packageDescriptionController =
       TextEditingController();
 
@@ -1570,6 +1383,13 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   DistanceInfo? _distanceInfo;
   double _estimatedPrice = 0;
   bool _isLoadingDistance = true;
+  
+  // User profile data
+  String _userName = '';
+  String _userPhone = '';
+  String _userNid = '';
+  bool _isPhoneEditable = false;
+  bool _isNidEditable = false;
 
   final List<Map<String, dynamic>> packageSizes = [
     {
@@ -1593,14 +1413,65 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   void initState() {
     super.initState();
     _calculateDistance();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final helper = SharedpreferenceHelper();
+      String? uid = await helper.getUserId();
+      
+      if (uid == null || uid.isEmpty) {
+        final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
+        if (firebaseUid != null && firebaseUid.isNotEmpty) {
+          final byUid = await DatabaseMethods().getUserByFirebaseUid(firebaseUid);
+          if (byUid.docs.isNotEmpty) {
+            uid = byUid.docs.first.id;
+            await helper.saveUserId(uid);
+          }
+        }
+      }
+
+      if (uid != null && uid.isNotEmpty) {
+        final doc = await DatabaseMethods().getUserDetail(uid);
+        if (doc.exists) {
+          final data = doc.data()!;
+          setState(() {
+            _userName = data['Name'] ?? '';
+            _userPhone = data['Phone'] ?? '';
+            _userNid = data['NID'] ?? '';
+            
+            // Check if phone and NID fields should be editable
+            _isPhoneEditable = _userPhone.isEmpty;
+            _isNidEditable = _userNid.isEmpty;
+            
+            if (widget.isSending) {
+              // Sending: Auto-fill sender details
+              senderNameController.text = _userName;
+              senderPhoneController.text = _userPhone;
+              senderNidController.text = _userNid;
+            } else {
+              // Receiving: Auto-fill recipient details (which are "My Details" in receiving mode)
+              recipientNameController.text = _userName;
+              recipientPhoneController.text = _userPhone;
+              recipientNidController.text = _userNid;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   @override
   void dispose() {
     senderNameController.dispose();
     senderPhoneController.dispose();
+    senderNidController.dispose();
     recipientNameController.dispose();
     recipientPhoneController.dispose();
+    recipientNidController.dispose();
     packageDescriptionController.dispose();
     super.dispose();
   }
@@ -1665,35 +1536,87 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                     const SizedBox(height: 20),
                     _buildPackageSizeSelection(),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Sender details'),
-                    const SizedBox(height: 12),
-                    _buildInputField(
-                      controller: senderNameController,
-                      hint: 'Sender name',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInputField(
-                      controller: senderPhoneController,
-                      hint: 'Sender phone number',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSectionTitle('Recipient details'),
-                    const SizedBox(height: 12),
-                    _buildInputField(
-                      controller: recipientNameController,
-                      hint: 'Recipient name',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInputField(
-                      controller: recipientPhoneController,
-                      hint: 'Recipient phone number',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
+                    if (widget.isSending) ...[
+                      // Sending: Show sender (auto-filled) then recipient (editable)
+                      _buildSectionTitle('Your details'),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: senderNameController,
+                        hint: 'Your name',
+                        icon: Icons.person_outline,
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: senderPhoneController,
+                        hint: 'Your phone number',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        enabled: _isPhoneEditable,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: senderNidController,
+                        hint: 'Your NID',
+                        icon: Icons.badge_outlined,
+                        enabled: _isNidEditable,
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle('Recipient details'),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: recipientNameController,
+                        hint: 'Recipient name',
+                        icon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: recipientPhoneController,
+                        hint: 'Recipient phone number',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ] else ...[
+                      // Receiving: Show recipient (auto-filled) then sender (editable)
+                      _buildSectionTitle('Your details'),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: recipientNameController,
+                        hint: 'Your name',
+                        icon: Icons.person_outline,
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: recipientPhoneController,
+                        hint: 'Your phone number',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        enabled: _isPhoneEditable,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: recipientNidController,
+                        hint: 'Your NID',
+                        icon: Icons.badge_outlined,
+                        enabled: _isNidEditable,
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle('Sender details'),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: senderNameController,
+                        hint: 'Sender name',
+                        icon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInputField(
+                        controller: senderPhoneController,
+                        hint: 'Sender phone number',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     _buildSectionTitle('Package description (optional)'),
                     const SizedBox(height: 12),
@@ -1959,6 +1882,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    bool enabled = true,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1980,6 +1904,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
           Expanded(
             child: TextField(
               controller: controller,
+              enabled: enabled,
               keyboardType: keyboardType,
               maxLines: maxLines,
               style: const TextStyle(color: Colors.black87, fontSize: 16),
@@ -2178,19 +2103,9 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             child: const Text('Edit'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please login to continue'),
-                  backgroundColor: Color(0xFF0D7D8F),
-                ),
-              );
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false,
-              );
+              await _placeOrder();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D7D8F),
@@ -2200,6 +2115,82 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _placeOrder() async {
+    try {
+      final helper = SharedpreferenceHelper();
+      final userId = await helper.getUserId();
+      if (userId == null) {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      final orderId = 'QP-${DateTime.now().millisecondsSinceEpoch}';
+      final orderData = {
+        'OrderId': orderId,
+        'UserId': userId,
+        'SenderName': senderNameController.text.trim(),
+        'SenderPhone': senderPhoneController.text.trim(),
+        'ReceiverName': recipientNameController.text.trim(),
+        'ReceiverPhone': recipientPhoneController.text.trim(),
+        'PickupAddress': widget.pickupLocation.address,
+        'DropoffAddress': widget.dropoffLocation.address,
+        'PackageSize': selectedPackageSize,
+        'PackageDescription': packageDescriptionController.text.trim(),
+        'Distance': _distanceInfo?.distanceText ?? 'N/A',
+        'EstimatedTime': _distanceInfo?.durationText ?? 'N/A',
+        'Price': _estimatedPrice.toStringAsFixed(0),
+        'Status': 'Pending',
+        'CreatedAt': DateTime.now().toIso8601String(),
+      };
+
+      await DatabaseMethods().addUserOrder(orderData, userId, orderId);
+      await DatabaseMethods().addAdminOrder(orderData, orderId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Order placed successfully!',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to place order: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildSummaryRow(String label, String value) {
@@ -2358,7 +2349,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     _debounceTimer?.cancel();
     debugPrint('Search changed: "$query" (length: ${query.length})');
 
-    if (query.length < 1) {
+    if (query.isEmpty) {
       setState(() {
         _predictions = [];
         _isSearching = false;

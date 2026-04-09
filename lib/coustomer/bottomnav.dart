@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:quick_parcel/coustomer/homepage.dart';
+import 'package:quick_parcel/coustomer/my_packages.dart';
+import 'package:quick_parcel/coustomer/live_tracking.dart';
+import 'package:quick_parcel/coustomer/sendPackage.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -13,8 +16,9 @@ class _BottomNavState extends State<BottomNav> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    TrackingScreen(),
-    PackagesScreen(),
+    SendPackage(),
+    LiveTrackingPage(),
+    MyPackagesPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -63,6 +67,21 @@ class _BottomNavState extends State<BottomNav> {
               ),
               BottomNavigationBarItem(
                 icon: Image.asset(
+                  'images/send_package.png',
+                  height: 34,
+                  width: 34,
+                  color: Colors.grey,
+                ),
+                activeIcon: Image.asset(
+                  'images/send_package.png',
+                  height: 34,
+                  width: 34,
+                  color: const Color(0xFF0D7D8F),
+                ),
+                label: 'Send',
+              ),
+              BottomNavigationBarItem(
+                icon: Image.asset(
                   'images/live_traking.png',
                   height: 34,
                   width: 34,
@@ -93,23 +112,6 @@ class _BottomNavState extends State<BottomNav> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// screens
-class TrackingScreen extends StatelessWidget {
-  const TrackingScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text(
-          'Tracking Screen',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
       ),
     );

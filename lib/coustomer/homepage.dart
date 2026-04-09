@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quick_parcel/coustomer/profile.dart';
 import 'package:quick_parcel/coustomer/sendPackage.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
@@ -134,7 +135,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       // profile pic
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProfilePage(),
+                            ),
+                          );
+                          // refresh profile data when returning
+                          _loadUserInfo();
+                        },
                         child: _buildProfilePicture(),
                       ),
                       const SizedBox(width: 15),
@@ -163,63 +173,133 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 25),
 
-                  //search track
+                  // search track
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Track your package',
+                          'Track Your Package',
                           style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1A1A2E),
+                            letterSpacing: 0.2,
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          'Enter your package tracking number',
-                          style: TextStyle(color: Colors.grey[600]),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: Text(
+                            'Enter your tracking number to get live updates',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 14),
                         Row(
                           children: [
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
+                                  horizontal: 14,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F5F7),
-                                  borderRadius: BorderRadius.circular(15),
+                                  color: const Color(0xFFF0FAFB),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF0D7D8F,
+                                    ).withOpacity(0.15),
+                                  ),
                                 ),
                                 child: TextField(
                                   controller: _trackingController,
-                                  decoration: const InputDecoration(
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1A1A2E),
+                                  ),
+                                  decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'Tracking number',
+                                    hintText: 'e.g. QP-2026-XXXXXX',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             Container(
                               height: 52,
                               width: 52,
                               decoration: BoxDecoration(
-                                color: Color(0xFF0D7D8F),
-                                borderRadius: BorderRadius.circular(15),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF0D7D8F),
+                                    Color(0xFF0A9BAF),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF0D7D8F,
+                                    ).withOpacity(0.35),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: IconButton(
                                 icon: const Icon(
-                                  Icons.search,
+                                  Icons.search_rounded,
                                   color: Colors.white,
+                                  size: 22,
                                 ),
-                                onPressed: () {},
+                                onPressed: () {
+                                  final trackingNumber = _trackingController
+                                      .text
+                                      .trim();
+                                  if (trackingNumber.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Please enter a tracking number',
+                                        ),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Tracking feature coming soon'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
                               ),
                             ),
                           ],
@@ -243,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   AppWidget.HomePagebuildMenuCard(
                     imagePath: 'images/send_package.png',
-                    label: 'Send package',
+                    label: 'Manage Parcels',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -255,13 +335,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   AppWidget.HomePagebuildMenuCard(
                     imagePath: 'images/my_package.png',
                     label: 'My package',
-                    onTap: () {},
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Access via bottom navigation'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
                   ),
 
                   AppWidget.HomePagebuildMenuCard(
                     imagePath: 'images/live_traking.png',
                     label: 'Live tracking',
-                    onTap: () {},
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Access via bottom navigation'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
                   ),
 
                   AppWidget.HomePagebuildMenuCard(

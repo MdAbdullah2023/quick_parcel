@@ -48,6 +48,8 @@ class SharedpreferenceHelper {
   }
 
   static String userProfileUrlKey = "USERPROFILEURLKEY";
+  static const String _userNidKey = "USER_NID";
+  static const String _userPhoneKey = "USER_PHONE";
 
   Future<bool> saveUserProfileUrl(String userProfileUrl) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -57,5 +59,29 @@ class SharedpreferenceHelper {
   Future<String?> getUserProfileUrl() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString(userProfileUrlKey);
+  }
+
+  // save user NID
+  Future<void> saveUserNid(String nid) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userNidKey, nid);
+  }
+
+  // get user NID
+  Future<String?> getUserNid() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userNidKey);
+  }
+
+  // save user phone
+  Future<void> saveUserPhone(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userPhoneKey, phone);
+  }
+
+  // get user phone
+  Future<String?> getUserPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userPhoneKey);
   }
 }
