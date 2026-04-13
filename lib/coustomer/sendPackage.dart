@@ -1383,7 +1383,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   DistanceInfo? _distanceInfo;
   double _estimatedPrice = 0;
   bool _isLoadingDistance = true;
-  
+
   // User profile data
   String _userName = '';
   String _userPhone = '';
@@ -1420,11 +1420,13 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     try {
       final helper = SharedpreferenceHelper();
       String? uid = await helper.getUserId();
-      
+
       if (uid == null || uid.isEmpty) {
         final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
         if (firebaseUid != null && firebaseUid.isNotEmpty) {
-          final byUid = await DatabaseMethods().getUserByFirebaseUid(firebaseUid);
+          final byUid = await DatabaseMethods().getUserByFirebaseUid(
+            firebaseUid,
+          );
           if (byUid.docs.isNotEmpty) {
             uid = byUid.docs.first.id;
             await helper.saveUserId(uid);
@@ -1440,11 +1442,11 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             _userName = data['Name'] ?? '';
             _userPhone = data['Phone'] ?? '';
             _userNid = data['NID'] ?? '';
-            
+
             // Check if phone and NID fields should be editable
             _isPhoneEditable = _userPhone.isEmpty;
             _isNidEditable = _userNid.isEmpty;
-            
+
             if (widget.isSending) {
               // Sending: Auto-fill sender details
               senderNameController.text = _userName;
@@ -2105,7 +2107,14 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _placeOrder();
+              final orderId = 'QP-${DateTime.now().millisecondsSinceEpoch}';
+              await _placeOrder(
+                orderId: orderId,
+                paymentStatus: 'Unpaid',
+                paymentMethod: 'Pending',
+                paymentProvider: '',
+                paidAmount: 0,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D7D8F),
@@ -2117,7 +2126,14 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     );
   }
 
-  Future<void> _placeOrder() async {
+  Future<void> _placeOrder({
+    required String orderId,
+    required String paymentStatus,
+    required String paymentMethod,
+    required String paymentProvider,
+    required double paidAmount,
+    String? transactionId,
+  }) async {
     try {
       final helper = SharedpreferenceHelper();
       final userId = await helper.getUserId();
@@ -2132,7 +2148,6 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         return;
       }
 
-      final orderId = 'QP-${DateTime.now().millisecondsSinceEpoch}';
       final orderData = {
         'OrderId': orderId,
         'UserId': userId,
@@ -2147,6 +2162,11 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         'Distance': _distanceInfo?.distanceText ?? 'N/A',
         'EstimatedTime': _distanceInfo?.durationText ?? 'N/A',
         'Price': _estimatedPrice.toStringAsFixed(0),
+        'PaymentStatus': paymentStatus,
+        'PaymentMethod': paymentMethod,
+        'PaymentProvider': paymentProvider,
+        'PaidAmount': paidAmount.toStringAsFixed(0),
+        'TransactionId': transactionId ?? '',
         'Status': 'Pending',
         'CreatedAt': DateTime.now().toIso8601String(),
       };

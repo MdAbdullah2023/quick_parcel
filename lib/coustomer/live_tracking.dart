@@ -1,8 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
+import 'package:quick_parcel/services/widget_support.dart';
 
 class LiveTrackingPage extends StatefulWidget {
   const LiveTrackingPage({super.key});
@@ -14,13 +13,6 @@ class LiveTrackingPage extends StatefulWidget {
 class _LiveTrackingPageState extends State<LiveTrackingPage> {
   static const Color _primary = Color(0xFF0D7D8F);
   static const Color _bg = Color(0xFFF5F5F5);
-
-  // Dummy raider info for demo; replace with real data from Firestore if available
-  final String raiderName = 'Abdullah';
-  final String raiderPhone = '+88017xxxxxxx';
-  final String raiderEmail = 'abd@email.com';
-  final LatLng startLatLng = LatLng(24.3636, 88.6241);
-  final LatLng endLatLng = LatLng(24.3736, 88.6341);
 
   String? _userId;
   bool _loadingUser = true;
@@ -93,6 +85,61 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         return const Color(0xFFFEF2F2);
       default:
         return Colors.grey.shade50;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Icons.access_time_rounded;
+      case 'confirmed':
+        return Icons.check_circle_outline_rounded;
+      case 'in transit':
+        return Icons.local_shipping_outlined;
+      case 'delivered':
+        return Icons.done_all_rounded;
+      case 'cancelled':
+        return Icons.cancel_outlined;
+      default:
+        return Icons.help_outline_rounded;
+    }
+  }
+
+  int _statusStep(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 0;
+      case 'confirmed':
+        return 1;
+      case 'in transit':
+        return 2;
+      case 'delivered':
+        return 3;
+      default:
+        return -1;
+    }
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
     }
   }
 
@@ -202,13 +249,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                         );
                       }
 
-                      // Show first order only for live tracking
-                      final data = allDocs.first.data();
-                      return SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          child: _trackingCard(data),
-                        ),
+                      return ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                        itemCount: allDocs.length,
+                        itemBuilder: (context, index) {
+                          final data = allDocs[index].data();
+                          return _trackingCard(data);
+                        },
                       );
                     },
                   ),
@@ -223,14 +270,20 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   Widget _trackingCard(Map<String, dynamic> data) {
     final status = data['Status'] ?? 'Pending';
     final orderId = data['OrderId'] ?? 'No Tracking ID';
-    final createdAt = data['CreatedAt'] ?? '';
-    final statusHistory = data['statusHistory'];
+    final createdAt = (data['CreatedAt'] ?? '').toString();
+    final price = (data['Price'] ?? '0').toString();
+    final pickup = (data['PickupAddress'] ?? '').toString();
+    final dropoff = (data['DropoffAddress'] ?? '').toString();
+    final sender = (data['SenderName'] ?? '').toString();
+    final receiver = (data['ReceiverName'] ?? '').toString();
+    final packageSize = (data['PackageSize'] ?? '').toString();
+    final distance = (data['Distance'] ?? '').toString();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -247,24 +300,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             decoration: BoxDecoration(
               color: _statusBg(status),
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
+                top: Radius.circular(20),
               ),
             ),
             child: Row(
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _statusColor(status).withOpacity(0.1),
-                  ),
-                  child: Icon(
-                    Icons.local_shipping_outlined,
-                    color: _statusColor(status),
-                    size: 16,
-                  ),
-                ),
+                Icon(_statusIcon(status), color: _statusColor(status), size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -281,158 +322,178 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               ],
             ),
           ),
+
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: _buildTimeline(statusHistory, status, createdAt),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _routeRow(pickup, dropoff),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                _detailChip(Icons.person_outline_rounded, sender),
+                const SizedBox(width: 8),
+                _detailChip(Icons.person_pin_outlined, receiver),
+              ],
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                _detailChip(Icons.inventory_2_outlined, packageSize),
+                const SizedBox(width: 8),
+                _detailChip(Icons.route_outlined, distance),
+              ],
+            ),
+          ),
+
+          if (status.toLowerCase() != 'cancelled')
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: _progressTracker(status),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDate(createdAt),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _primary.withOpacity(0.2)),
+                  ),
+                  child: Text(
+                    '৳ $price',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: _primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  //  timeline
+  Widget _progressTracker(String status) {
+    final steps = ['Pending', 'Confirmed', 'In Transit', 'Delivered'];
+    final currentStep = _statusStep(status);
 
-  Widget _buildTimeline(
-    List<dynamic>? statusHistory,
-    String status,
-    String createdAt,
-  ) {
-    final List<Map<String, dynamic>> timeline =
-        (statusHistory != null && statusHistory.isNotEmpty)
-        ? statusHistory.cast<Map<String, dynamic>>()
-        : [
-            {'status': status, 'time': createdAt},
-          ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Text(
-            'Tracking Updates',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
+    return Row(
+      children: List.generate(steps.length * 2 - 1, (i) {
+        if (i.isOdd) {
+          final stepIdx = i ~/ 2;
+          final isDone = stepIdx < currentStep;
+          return Expanded(
+            child: Container(
+              height: 2,
+              color: isDone ? _primary : Colors.grey.shade200,
             ),
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: List.generate(timeline.length, (i) {
-            final entry = timeline[i];
-            final s = (entry['status'] ?? '').toString();
-            final t = entry['time'] ?? '';
-            final color = _statusColor(s);
+          );
+        }
 
-            String formattedTime = '';
-            try {
-              final dt = DateTime.parse(t);
-              formattedTime = DateFormat('dd MMM, hh:mm a').format(dt);
-            } catch (_) {
-              formattedTime = t;
-            }
+        final stepIdx = i ~/ 2;
+        final isDone = stepIdx <= currentStep;
+        final isCurrent = stepIdx == currentStep;
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    if (i != timeline.length - 1)
-                      Container(
-                        width: 2,
-                        height: 28,
-                        color: color.withOpacity(0.2),
-                      ),
-                  ],
+        return Column(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDone ? _primary : Colors.grey.shade100,
+                border: Border.all(
+                  color: isDone ? _primary : Colors.grey.shade300,
+                  width: isCurrent ? 2.5 : 1.5,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          s[0].toUpperCase() + s.substring(1),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: color,
-                          ),
+                boxShadow: isCurrent
+                    ? [
+                        BoxShadow(
+                          color: _primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          formattedTime,
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
-      ],
+                      ]
+                    : [],
+              ),
+              child: Icon(
+                isDone ? Icons.check_rounded : _stepIcon(stepIdx),
+                size: 13,
+                color: isDone ? Colors.white : Colors.grey.shade400,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              steps[stepIdx],
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                color: isDone ? _primary : Colors.grey.shade400,
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
+
+  IconData _stepIcon(int step) {
+    switch (step) {
+      case 0:
+        return Icons.access_time_rounded;
+      case 1:
+        return Icons.check_circle_outline_rounded;
+      case 2:
+        return Icons.local_shipping_outlined;
+      case 3:
+        return Icons.done_all_rounded;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
+  Widget _routeRow(String pickup, String dropoff) =>
+      MyPackagesWidgets.routeRow(pickup: pickup, dropoff: dropoff);
+
+  Widget _detailChip(IconData icon, String label) =>
+      MyPackagesWidgets.detailChip(icon: icon, label: label);
 
   //  status badge ─
 
   Widget _statusBadge(String status) {
-    final color = _statusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        status[0].toUpperCase() + status.substring(1),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
+    final safeStatus = status.isEmpty ? 'Pending' : status;
+    return MyPackagesWidgets.statusBadge(
+      status: safeStatus,
+      statusColor: _statusColor(safeStatus),
     );
   }
 
   //  empty state
 
   Widget _emptyState({required IconData icon, required String message}) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: _primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF9CA3AF),
-            ),
-          ),
-        ],
-      ),
-    );
+    return MyPackagesWidgets.emptyState(icon: icon, message: message);
   }
 }

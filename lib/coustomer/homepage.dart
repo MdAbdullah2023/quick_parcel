@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:quick_parcel/coustomer/billing_page.dart';
 import 'package:quick_parcel/coustomer/profile.dart';
 import 'package:quick_parcel/coustomer/sendPackage.dart';
+import 'package:quick_parcel/coustomer/my_packages.dart';
+import 'package:quick_parcel/coustomer/live_tracking.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
@@ -52,6 +57,141 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() => _loadingProfile = false);
       }
+    }
+  }
+
+  double _parseAmount(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
+  Future<void> _openBillingFromHome() async {
+    try {
+      final helper = SharedpreferenceHelper();
+      final userId = await helper.getUserId();
+      if (userId == null || userId.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login to view billing.')),
+        );
+        return;
+      }
+
+      final ordersSnapshot = await DatabaseMethods().getUserOrders(userId).first;
+      final unpaidBills = <UnpaidBillItem>[];
+
+      for (final doc in ordersSnapshot.docs) {
+        final data = (doc.data() as Map<String, dynamic>?) ?? {};
+        final paymentStatus = (data['PaymentStatus'] ?? '').toString();
+        if (paymentStatus == 'Paid') {
+          continue;
+        }
+
+        final orderId = (data['OrderId'] ?? doc.id).toString();
+        final amount = _parseAmount(data['Price']);
+        final senderName =
+          (data['SenderName'] ?? data['ReceiverName'] ?? userName).toString();
+        final senderPhone =
+          (data['SenderPhone'] ?? data['ReceiverPhone'] ?? '').toString();
+        final receiverName =
+          (data['ReceiverName'] ?? data['SenderName'] ?? 'Receiver').toString();
+        final receiverPhone =
+          (data['ReceiverPhone'] ?? data['SenderPhone'] ?? '').toString();
+        final pickupAddress = (data['PickupAddress'] ?? '').toString();
+        final dropoffAddress = (data['DropoffAddress'] ?? '').toString();
+        final packageSize = (data['PackageSize'] ?? '').toString();
+        final packageDescription = (data['PackageDescription'] ?? '').toString();
+        final distance = (data['Distance'] ?? '').toString();
+        final estimatedTime = (data['EstimatedTime'] ?? '').toString();
+        final createdAt = (data['CreatedAt'] ?? '').toString();
+
+        unpaidBills.add(
+          UnpaidBillItem(
+            orderId: orderId,
+            amount: amount,
+          senderName: senderName,
+          senderPhone: senderPhone,
+          receiverName: receiverName,
+          receiverPhone: receiverPhone,
+          pickupAddress: pickupAddress,
+          dropoffAddress: dropoffAddress,
+          packageSize: packageSize,
+          packageDescription: packageDescription,
+          distance: distance,
+          estimatedTime: estimatedTime,
+          createdAt: createdAt,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+
+      if (unpaidBills.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No unpaid bill found.')));
+        return;
+      }
+      final customerEmail =
+          FirebaseAuth.instance.currentUser?.email ??
+          'customer@quickparcel.com';
+
+      final result = await Navigator.push<BillingResult>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BillingPage.unpaid(
+            unpaidBills: unpaidBills,
+            customerEmail: customerEmail,
+          ),
+        ),
+      );
+
+      if (!mounted || result == null) return;
+      final orderId = result.orderId;
+
+      final updateData = {
+        'PaymentStatus': result.paymentStatus,
+        'PaymentMethod': result.paymentMethod,
+        'PaymentProvider': result.paymentProvider,
+        'PaidAmount': result.paidAmount.toStringAsFixed(0),
+        'TransactionId': result.transactionId ?? '',
+        'UpdatedAt': DateTime.now().toIso8601String(),
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('Order')
+          .doc(orderId)
+          .update(updateData);
+
+      await FirebaseFirestore.instance
+          .collection('Order')
+          .doc(orderId)
+          .update(updateData);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.paymentStatus == 'Paid'
+                ? 'Payment successful for bill $orderId'
+                : 'Billing updated for order $orderId',
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Billing failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -294,7 +434,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Tracking feature coming soon'),
+                                        content: Text(
+                                          'Tracking feature coming soon',
+                                        ),
                                         duration: Duration(seconds: 2),
                                       ),
                                     );
@@ -336,10 +478,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     imagePath: 'images/my_package.png',
                     label: 'My package',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Access via bottom navigation'),
-                          duration: Duration(seconds: 2),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MyPackagesPage(),
                         ),
                       );
                     },
@@ -349,10 +491,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     imagePath: 'images/live_traking.png',
                     label: 'Live tracking',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Access via bottom navigation'),
-                          duration: Duration(seconds: 2),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LiveTrackingPage(),
                         ),
                       );
                     },
@@ -361,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   AppWidget.HomePagebuildMenuCard(
                     imagePath: 'images/billing.png',
                     label: 'Billing',
-                    onTap: () {},
+                    onTap: _openBillingFromHome,
                   ),
                 ],
               ),

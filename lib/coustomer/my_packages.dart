@@ -325,7 +325,6 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     final receiver = data['ReceiverName'] ?? '';
     final pkgSize = data['PackageSize'] ?? '';
     final distance = data['Distance'] ?? '';
-    final eta = data['EstimatedTime'] ?? '';
     final photoUrl = data['PackagePhoto'] ?? '';
 
     return Container(
@@ -407,8 +406,6 @@ class _MyPackagesPageState extends State<MyPackagesPage>
                 _detailChip(Icons.inventory_2_outlined, pkgSize),
                 const SizedBox(width: 8),
                 _detailChip(Icons.route_outlined, distance),
-                const SizedBox(width: 8),
-                _detailChip(Icons.timer_outlined, eta),
               ],
             ),
           ),
