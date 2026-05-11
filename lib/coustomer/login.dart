@@ -9,20 +9,10 @@ import 'package:quick_parcel/services/CustomTextField.dart';
 import 'package:quick_parcel/services/widget_support.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/database.dart';
-import 'package:quick_parcel/coustomer/signUp.dart';
-import 'package:quick_parcel/coustomer/billing_page.dart';
+import 'package:quick_parcel/coustomer/signup.dart';
 
 class LoginScreen extends StatefulWidget {
-  final Map<String, dynamic>? orderData;
-  final String? orderId;
-  final bool isFromOffer;
-
-  const LoginScreen({
-    super.key,
-    this.orderData,
-    this.orderId,
-    this.isFromOffer = false,
-  });
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -87,45 +77,6 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Text('Logged in successfully'),
         ),
       );
-
-      // If user came from offer/guest-order flow, link order to this account
-      // and continue to billing instead of jumping straight to home.
-      if (widget.isFromOffer &&
-          widget.orderId != null &&
-          widget.orderId!.isNotEmpty) {
-        final currentUserId = resolvedUserDocId ?? firebaseUid;
-
-        await DatabaseMethods().linkOrderToUser(
-          userId: currentUserId,
-          orderId: widget.orderId!,
-          fallbackOrderData: widget.orderData,
-        );
-
-        final senderName =
-            (widget.orderData?['SenderName'] ?? resolvedUserData?['Name'] ?? '')
-                .toString();
-        final senderPhone =
-            (widget.orderData?['SenderPhone'] ?? resolvedUserData?['Phone'] ?? '')
-                .toString();
-        final amount = double.tryParse(
-          (widget.orderData?['Price'] ?? '0').toString(),
-        );
-
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => BillingPage(
-              orderId: widget.orderId,
-              amount: amount,
-              customerName: senderName,
-              customerPhone: senderPhone,
-              customerEmail: email,
-              isFromOffer: true,
-            ),
-          ),
-        );
-        return;
-      }
 
       Navigator.of(
         context,
@@ -496,11 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ..onTap = () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => SignUpScreen(
-                                          orderData: widget.orderData,
-                                          orderId: widget.orderId,
-                                          isFromOffer: widget.isFromOffer,
-                                        ),
+                                        builder: (_) => const SignUpScreen(),
                                       ),
                                     );
                                   },

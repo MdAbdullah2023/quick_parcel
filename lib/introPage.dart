@@ -159,9 +159,7 @@ class _IntropageState extends State<Intropage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const SendPackage(
-                                        selectedOffer: ParcelOffer.megaDiscount,
-                                      ),
+                                      builder: (context) => SendPackage(),
                                     ),
                                   );
                                 },
@@ -184,9 +182,7 @@ class _IntropageState extends State<Intropage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const SendPackage(
-                                        selectedOffer: ParcelOffer.cashback200,
-                                      ),
+                                      builder: (context) => SendPackage(),
                                     ),
                                   );
                                 },
@@ -204,29 +200,17 @@ class _IntropageState extends State<Intropage> {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const SendPackage(
-                                        selectedOffer: ParcelOffer.expressFree,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: AppWidget.buildPremiumOfferItem(
-                                  icon: Icons.rocket_launch_rounded,
-                                  title: "EXPRESS FREE",
-                                  subtitle: "Free Express Delivery",
-                                  description:
-                                      "Get items delivered within 2 hours - FREE!",
-                                  gradient: const [
-                                    Color(0xFF4E54C8),
-                                    Color(0xFF8F94FB),
-                                  ],
-                                  badge: "NEW",
-                                ),
+                              AppWidget.buildPremiumOfferItem(
+                                icon: Icons.rocket_launch_rounded,
+                                title: "EXPRESS FREE",
+                                subtitle: "Free Express Delivery",
+                                description:
+                                    "Get items delivered within 2 hours - FREE!",
+                                gradient: const [
+                                  Color(0xFF4E54C8),
+                                  Color(0xFF8F94FB),
+                                ],
+                                badge: "NEW",
                               ),
                               const SizedBox(height: 15),
                               GestureDetector(
@@ -234,9 +218,7 @@ class _IntropageState extends State<Intropage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const SendPackage(
-                                        selectedOffer: ParcelOffer.loyaltyBonus,
-                                      ),
+                                      builder: (context) => SendPackage(),
                                     ),
                                   );
                                 },
@@ -261,6 +243,7 @@ class _IntropageState extends State<Intropage> {
                   ),
 
                   const SizedBox(height: 30),
+                
 
                   // get started button
                   GestureDetector(
@@ -281,8 +264,8 @@ class _IntropageState extends State<Intropage> {
                               style: AppWidget.BoldGreenTextfeildStyle(20),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          const Icon(
+                          SizedBox(width: 10),
+                          Icon(
                             Icons.arrow_forward_rounded,
                             color: Color(0xFF0D7D8F),
                             size: 28,

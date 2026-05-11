@@ -68,400 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return 0;
   }
 
-  Future<Map<String, dynamic>?> _findMyOrderByTrackingNumber(
-    String userId,
-    String trackingNumber,
-  ) async {
-    final userOrderRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('Order');
-
-    // First try document id lookup, because many orders use orderId as doc id.
-    final byDocId = await userOrderRef.doc(trackingNumber).get();
-    if (byDocId.exists) {
-      return byDocId.data();
-    }
-
-    // Fallback: lookup by OrderId field.
-    final byField = await userOrderRef
-        .where('OrderId', isEqualTo: trackingNumber)
-        .limit(1)
-        .get();
-    if (byField.docs.isNotEmpty) {
-      return byField.docs.first.data();
-    }
-
-    return null;
-  }
-
-  Color _trackingStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return const Color(0xFFF59E0B);
-      case 'confirmed':
-        return const Color(0xFF3B82F6);
-      case 'in transit':
-        return const Color(0xFF0D7D8F);
-      case 'delivered':
-        return const Color(0xFF22C55E);
-      case 'cancelled':
-        return const Color(0xFFEF4444);
-      default:
-        return const Color(0xFF64748B);
-    }
-  }
-
-  IconData _trackingStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return Icons.access_time_rounded;
-      case 'confirmed':
-        return Icons.verified_rounded;
-      case 'in transit':
-        return Icons.local_shipping_rounded;
-      case 'delivered':
-        return Icons.done_all_rounded;
-      case 'cancelled':
-        return Icons.cancel_rounded;
-      default:
-        return Icons.help_outline_rounded;
-    }
-  }
-
-  String _formatTrackingDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso);
-      const months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return iso;
-    }
-  }
-
-  Future<void> _trackMyPackage() async {
-    final trackingNumber = _trackingController.text.trim();
-    if (trackingNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a tracking number'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    try {
-      final helper = SharedpreferenceHelper();
-      final userId = await helper.getUserId();
-
-      if (userId == null || userId.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please login to track your order'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
-
-      final orderData = await _findMyOrderByTrackingNumber(
-        userId,
-        trackingNumber,
-      );
-
-      if (!mounted) return;
-
-      if (orderData == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No order found with this tracking number'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
-
-      final orderId = (orderData['OrderId'] ?? trackingNumber).toString();
-      final status = (orderData['Status'] ?? 'Pending').toString();
-      final pickup = (orderData['PickupAddress'] ?? '').toString();
-      final dropoff = (orderData['DropoffAddress'] ?? '').toString();
-      final amount = (orderData['Price'] ?? '0').toString();
-      final createdAt = (orderData['CreatedAt'] ?? '').toString();
-      final statusColor = _trackingStatusColor(status);
-      final statusIcon = _trackingStatusIcon(status);
-
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) {
-          return Container(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 46,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0D7D8F), Color(0xFF0A9BAF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Order Found',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          orderId,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        if (createdAt.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            _formatTrackingDate(createdAt),
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.85),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(statusIcon, color: statusColor, size: 16),
-                            const SizedBox(width: 6),
-                            Text(
-                              status,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE6F4F7),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '৳ $amount',
-                          style: const TextStyle(
-                            color: Color(0xFF0D7D8F),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.radio_button_checked_rounded,
-                              color: Color(0xFF0D7D8F),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                pickup.isEmpty ? 'Pickup address not found' : pickup,
-                                style: const TextStyle(
-                                  color: Color(0xFF1E293B),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              width: 1.6,
-                              height: 20,
-                              color: const Color(0xFFCBD5E1),
-                            ),
-                          ),
-                        ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.location_on_rounded,
-                              color: Color(0xFFEF4444),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                dropoff.isEmpty ? 'Dropoff address not found' : dropoff,
-                                style: const TextStyle(
-                                  color: Color(0xFF1E293B),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              this.context,
-                              MaterialPageRoute(
-                                builder: (_) => const LiveTrackingPage(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.map_rounded, size: 18),
-                          label: const Text('Live Tracking'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF0D7D8F),
-                            side: const BorderSide(color: Color(0xFF0D7D8F)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              this.context,
-                              MaterialPageRoute(
-                                builder: (_) => const MyPackagesPage(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.inventory_2_rounded, size: 18),
-                          label: const Text('My Packages'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0D7D8F),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tracking failed: $e'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
   Future<void> _openBillingFromHome() async {
     try {
       final helper = SharedpreferenceHelper();
@@ -480,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
       for (final doc in ordersSnapshot.docs) {
         final data = (doc.data() as Map<String, dynamic>?) ?? {};
         final paymentStatus = (data['PaymentStatus'] ?? '').toString();
-        if (paymentStatus == 'Paid' || paymentStatus == 'CashOnDelivery') {
+        if (paymentStatus == 'Paid') {
           continue;
         }
 
@@ -622,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ? Image.network(
                 profileImageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const Icon(
+                errorBuilder: (_, __, ___) => const Icon(
                   Icons.person,
                   size: 35,
                   color: Color(0xFF0D7D8F),
@@ -812,7 +418,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.white,
                                   size: 22,
                                 ),
-                                onPressed: _trackMyPackage,
+                                onPressed: () {
+                                  final trackingNumber = _trackingController
+                                      .text
+                                      .trim();
+                                  if (trackingNumber.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Please enter a tracking number',
+                                        ),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Tracking feature coming soon',
+                                        ),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
                               ),
                             ),
                           ],

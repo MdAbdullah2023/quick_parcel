@@ -8,8 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.quick_parcel"
-    buildToolsVersion = "36.0.0"
-    compileSdk = 36
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

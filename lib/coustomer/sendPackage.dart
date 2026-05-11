@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:quick_parcel/coustomer/login.dart';
-import 'package:quick_parcel/coustomer/signUp.dart';
-import 'package:quick_parcel/coustomer/billing_page.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/google_places_service.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
@@ -12,59 +10,8 @@ import 'package:uuid/uuid.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-enum ParcelOfferType { percentage, flat, freeDeliveryCharge, loyaltyFree }
-
-class ParcelOffer {
-  final String code;
-  final String title;
-  final ParcelOfferType type;
-  final double value;
-  final double minOrderAmount;
-  final double maxDiscount;
-
-  const ParcelOffer({
-    required this.code,
-    required this.title,
-    required this.type,
-    this.value = 0,
-    this.minOrderAmount = 0,
-    this.maxDiscount = 0,
-  });
-
-  static const megaDiscount = ParcelOffer(
-    code: 'MEGA50',
-    title: 'Mega Discount',
-    type: ParcelOfferType.percentage,
-    value: 50,
-    maxDiscount: 300,
-  );
-
-  static const cashback200 = ParcelOffer(
-    code: 'CASHBACK200',
-    title: 'Cashback Offer',
-    type: ParcelOfferType.flat,
-    value: 200,
-    minOrderAmount: 500,
-  );
-
-  static const expressFree = ParcelOffer(
-    code: 'EXPRESSFREE',
-    title: 'Express Free',
-    type: ParcelOfferType.freeDeliveryCharge,
-    value: 50,
-  );
-
-  static const loyaltyBonus = ParcelOffer(
-    code: 'LOYALTYBONUS',
-    title: 'Loyalty Bonus',
-    type: ParcelOfferType.loyaltyFree,
-  );
-}
-
 class SendPackage extends StatefulWidget {
-  final ParcelOffer? selectedOffer;
-
-  const SendPackage({super.key, this.selectedOffer});
+  const SendPackage({super.key});
 
   @override
   State<SendPackage> createState() => _SendPackageState();
@@ -243,10 +190,7 @@ class _SendPackageState extends State<SendPackage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => LocationPickerScreen(
-          isSending: isSending,
-          selectedOffer: widget.selectedOffer,
-        ),
+        builder: (context) => LocationPickerScreen(isSending: isSending),
       ),
     );
   }
@@ -255,13 +199,8 @@ class _SendPackageState extends State<SendPackage> {
 // Location Picker Screen - Professional with Google Places
 class LocationPickerScreen extends StatefulWidget {
   final bool isSending;
-  final ParcelOffer? selectedOffer;
 
-  const LocationPickerScreen({
-    super.key,
-    this.isSending = true,
-    this.selectedOffer,
-  });
+  const LocationPickerScreen({super.key, this.isSending = true});
 
   @override
   State<LocationPickerScreen> createState() => _LocationPickerScreenState();
@@ -295,9 +234,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   // Debounce timer
   Timer? _debounceTimer;
 
-  // Address validation
-  bool _isSameAddressWarning = false;
-
   @override
   void initState() {
     super.initState();
@@ -328,13 +264,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     pickupFocusNode.dispose();
     dropoffFocusNode.dispose();
     super.dispose();
-  }
-
-  void _checkAddresses() {
-    _isSameAddressWarning = _pickupLocation != null &&
-        _dropoffLocation != null &&
-        _pickupLocation!.address.toLowerCase().trim() ==
-            _dropoffLocation!.address.toLowerCase().trim();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -469,7 +398,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           dropoffController.text = details.formattedAddress;
           _dropoffPredictions = [];
         }
-        _checkAddresses();
       });
 
       // Generate new session token after selection
@@ -647,7 +575,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             dropoffController.text = address;
             _dropoffPredictions = [];
           }
-          _checkAddresses();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -677,7 +604,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             dropoffController.text = 'Current Location';
             _dropoffPredictions = [];
           }
-          _checkAddresses();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -738,7 +664,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           dropoffController.text = result.address;
           _dropoffPredictions = [];
         }
-        _checkAddresses();
       });
     }
   }
@@ -761,58 +686,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     const SizedBox(height: 16),
                     _buildLocationInputs(),
                     const SizedBox(height: 8),
-
-                    // Show warning if addresses are the same
-                    if (_isSameAddressWarning) ...[
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFC62828),
-                              width: 2,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.warning_rounded,
-                                color: Color(0xFFC62828),
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Same Address Warning',
-                                      style: TextStyle(
-                                        color: Color(0xFFC62828),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      'Pickup and delivery addresses must be different.',
-                                      style: TextStyle(
-                                        color: Color(0xFFB71C1C),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
 
                     // Show search results or suggestions
                     if (_isPickupFieldActive && _pickupPredictions.isNotEmpty)
@@ -1372,7 +1245,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _isSameAddressWarning ? null : _proceedToPackageDetails,
+            onPressed: _proceedToPackageDetails,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D7D8F),
               foregroundColor: Colors.white,
@@ -1469,7 +1342,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           dropoffLocation: _dropoffLocation!,
           pickupTime: selectedPickupTime ?? 'Pick up now',
           isSending: widget.isSending,
-          selectedOffer: widget.selectedOffer,
         ),
       ),
     );
@@ -1482,7 +1354,6 @@ class PackageDetailsScreen extends StatefulWidget {
   final SelectedLocation dropoffLocation;
   final String pickupTime;
   final bool isSending;
-  final ParcelOffer? selectedOffer;
 
   const PackageDetailsScreen({
     super.key,
@@ -1490,7 +1361,6 @@ class PackageDetailsScreen extends StatefulWidget {
     required this.dropoffLocation,
     required this.pickupTime,
     this.isSending = true,
-    this.selectedOffer,
   });
 
   @override
@@ -1512,14 +1382,14 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   String selectedPackageSize = 'Small';
   DistanceInfo? _distanceInfo;
   double _estimatedPrice = 0;
-  double _basePrice = 0;
-  double _discountAmount = 0;
-  double _finalPrice = 0;
-  String _discountNote = '';
   bool _isLoadingDistance = true;
 
-  // Address validation
-  bool _isSameAddress = false;
+  // User profile data
+  String _userName = '';
+  String _userPhone = '';
+  String _userNid = '';
+  bool _isPhoneEditable = false;
+  bool _isNidEditable = false;
 
   final List<Map<String, dynamic>> packageSizes = [
     {
@@ -1544,14 +1414,6 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     super.initState();
     _calculateDistance();
     _loadUserData();
-    _checkAddresses();
-  }
-
-  void _checkAddresses() {
-    setState(() {
-      _isSameAddress = widget.pickupLocation.address.toLowerCase().trim() ==
-          widget.dropoffLocation.address.toLowerCase().trim();
-    });
   }
 
   Future<void> _loadUserData() async {
@@ -1575,21 +1437,28 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
       if (uid != null && uid.isNotEmpty) {
         final doc = await DatabaseMethods().getUserDetail(uid);
         if (doc.exists) {
-          // Auto-fill sender details from user profile
-          final userData = doc.data() as Map<String, dynamic>;
-          if (mounted) {
-            setState(() {
-              if (widget.isSending) {
-                senderNameController.text = userData['Name'] ?? '';
-                senderPhoneController.text = userData['Phone'] ?? '';
-                senderNidController.text = userData['NID'] ?? '';
-              } else {
-                recipientNameController.text = userData['Name'] ?? '';
-                recipientPhoneController.text = userData['Phone'] ?? '';
-                recipientNidController.text = userData['NID'] ?? '';
-              }
-            });
-          }
+          final data = doc.data()!;
+          setState(() {
+            _userName = data['Name'] ?? '';
+            _userPhone = data['Phone'] ?? '';
+            _userNid = data['NID'] ?? '';
+
+            // Check if phone and NID fields should be editable
+            _isPhoneEditable = _userPhone.isEmpty;
+            _isNidEditable = _userNid.isEmpty;
+
+            if (widget.isSending) {
+              // Sending: Auto-fill sender details
+              senderNameController.text = _userName;
+              senderPhoneController.text = _userPhone;
+              senderNidController.text = _userNid;
+            } else {
+              // Receiving: Auto-fill recipient details (which are "My Details" in receiving mode)
+              recipientNameController.text = _userName;
+              recipientPhoneController.text = _userPhone;
+              recipientNidController.text = _userNid;
+            }
+          });
         }
       }
     } catch (e) {
@@ -1636,88 +1505,19 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
       setState(() {
         _distanceInfo = distanceInfo;
         _isLoadingDistance = false;
+        _updatePrice();
       });
-      _updatePrice();
     }
   }
 
-  Future<int> _getExistingOrderCount() async {
-    try {
-      final uid = await SharedpreferenceHelper().getUserId();
-      if (uid == null || uid.isEmpty) return 0;
-      final snapshot = await DatabaseMethods().getUserOrders(uid).first;
-      return snapshot.docs.length;
-    } catch (_) {
-      return 0;
+  void _updatePrice() {
+    if (_distanceInfo != null) {
+      _estimatedPrice = _placesService.calculateDeliveryPrice(
+        _distanceInfo!.distanceValue,
+        selectedPackageSize,
+      );
+      setState(() {});
     }
-  }
-
-  Future<void> _updatePrice() async {
-    if (_distanceInfo == null) return;
-
-    final basePrice = _placesService.calculateDeliveryPrice(
-      _distanceInfo!.distanceValue,
-      selectedPackageSize,
-    );
-
-    double discount = 0;
-    String discountNote = '';
-
-    final offer = widget.selectedOffer;
-    if (offer != null) {
-      switch (offer.type) {
-        case ParcelOfferType.percentage:
-          discount = basePrice * (offer.value / 100);
-          if (offer.maxDiscount > 0 && discount > offer.maxDiscount) {
-            discount = offer.maxDiscount;
-          }
-          discountNote =
-              '${offer.title}: ${offer.value.toStringAsFixed(0)}% discount applied';
-          break;
-        case ParcelOfferType.flat:
-          if (basePrice >= offer.minOrderAmount) {
-            discount = offer.value;
-            discountNote =
-                '${offer.title}: ৳${offer.value.toStringAsFixed(0)} discount applied';
-          } else {
-            discountNote =
-                '${offer.title} applies on orders above ৳${offer.minOrderAmount.toStringAsFixed(0)}';
-          }
-          break;
-        case ParcelOfferType.freeDeliveryCharge:
-          discount = offer.value;
-          discountNote =
-              '${offer.title}: free delivery charge (৳${offer.value.toStringAsFixed(0)})';
-          break;
-        case ParcelOfferType.loyaltyFree:
-          final previousOrders = await _getExistingOrderCount();
-          final willBeFree = (previousOrders + 1) % 4 == 0;
-          if (willBeFree) {
-            discount = basePrice;
-            discountNote = '${offer.title}: this delivery is FREE';
-          } else {
-            final remaining = 4 - ((previousOrders + 1) % 4);
-            discountNote =
-                '${offer.title}: place $remaining more order(s) to get 1 free';
-          }
-          break;
-      }
-    }
-
-    if (discount > basePrice) {
-      discount = basePrice;
-    }
-
-    final payable = basePrice - discount;
-
-    if (!mounted) return;
-    setState(() {
-      _basePrice = basePrice;
-      _discountAmount = discount;
-      _finalPrice = payable;
-      _estimatedPrice = payable;
-      _discountNote = discountNote;
-    });
   }
 
   @override
@@ -1735,54 +1535,6 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildRouteSummary(),
-                    // Show warning if addresses are the same
-                    if (_isSameAddress) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFC62828),
-                            width: 2,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.warning_rounded,
-                              color: Color(0xFFC62828),
-                              size: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Same Address Warning',
-                                    style: TextStyle(
-                                      color: Color(0xFFC62828),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'Pickup and delivery addresses must be different. Please edit your addresses.',
-                                    style: TextStyle(
-                                      color: Color(0xFFB71C1C),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 20),
                     _buildPackageSizeSelection(),
                     const SizedBox(height: 24),
@@ -1794,6 +1546,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         controller: senderNameController,
                         hint: 'Your name',
                         icon: Icons.person_outline,
+                        enabled: false,
                       ),
                       const SizedBox(height: 12),
                       _buildInputField(
@@ -1801,12 +1554,14 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         hint: 'Your phone number',
                         icon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
+                        enabled: _isPhoneEditable,
                       ),
                       const SizedBox(height: 12),
                       _buildInputField(
                         controller: senderNidController,
                         hint: 'Your NID',
                         icon: Icons.badge_outlined,
+                        enabled: _isNidEditable,
                       ),
                       const SizedBox(height: 24),
                       _buildSectionTitle('Recipient details'),
@@ -1839,26 +1594,14 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         hint: 'Your phone number',
                         icon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
-                        enabled: false,
+                        enabled: _isPhoneEditable,
                       ),
                       const SizedBox(height: 12),
                       _buildInputField(
                         controller: recipientNidController,
                         hint: 'Your NID',
                         icon: Icons.badge_outlined,
-                        enabled: false,
-                      ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 2),
-                        child: Text(
-                          'Your details are taken from your profile.',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        enabled: _isNidEditable,
                       ),
                       const SizedBox(height: 24),
                       _buildSectionTitle('Sender details'),
@@ -1877,7 +1620,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Package description'),
+                    _buildSectionTitle('Package description (optional)'),
                     const SizedBox(height: 12),
                     _buildInputField(
                       controller: packageDescriptionController,
@@ -2007,6 +1750,14 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
               ),
               Container(width: 1, height: 30, color: Colors.grey.shade300),
               _buildInfoChip(
+                icon: Icons.access_time,
+                label: 'Est. Time',
+                value: _isLoadingDistance
+                    ? '...'
+                    : _distanceInfo?.durationText ?? 'N/A',
+              ),
+              Container(width: 1, height: 30, color: Colors.grey.shade300),
+              _buildInfoChip(
                 icon: Icons.schedule,
                 label: 'Pickup',
                 value: widget.pickupTime == 'Pick up now' ? 'Now' : 'Scheduled',
@@ -2058,8 +1809,8 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                 onTap: () {
                   setState(() {
                     selectedPackageSize = package['size'] as String;
+                    _updatePrice();
                   });
-                  _updatePrice();
                 },
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -2191,7 +1942,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
           break;
       }
       calculationText =
-          'Base: 50 + ($distanceKm km × 20 × $sizeMultiplier) = ৳${_basePrice.toStringAsFixed(0)}';
+          'Calculation: 50 + ($distanceKm km × 20 × $sizeMultiplier) = ৳${_estimatedPrice.toStringAsFixed(0)}';
     }
 
     return Container(
@@ -2236,7 +1987,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                           Text(
                             _isLoadingDistance
                                 ? 'Calculating...'
-                                : '৳ ${_finalPrice.toStringAsFixed(0)}',
+                                : '৳ ${_estimatedPrice.toStringAsFixed(0)}',
                             style: const TextStyle(
                               color: Color(0xFF0D7D8F),
                               fontSize: 28,
@@ -2276,40 +2027,6 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                       ),
                     ),
                   ],
-                  if (widget.selectedOffer != null) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Offer (${widget.selectedOffer!.title})',
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '- ৳ ${_discountAmount.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            color: Color(0xFF2E7D32),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_discountNote.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        _discountNote,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ],
                 ],
               ),
             ),
@@ -2318,7 +2035,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_isLoadingDistance || _isSameAddress) ? null : _confirmOrder,
+                onPressed: _isLoadingDistance ? null : _confirmOrder,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0D7D8F),
                   foregroundColor: Colors.white,
@@ -2344,27 +2061,11 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     if (senderNameController.text.isEmpty ||
         senderPhoneController.text.isEmpty ||
         recipientNameController.text.isEmpty ||
-        recipientPhoneController.text.isEmpty ||
-        packageDescriptionController.text.isEmpty) {
+        recipientPhoneController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill all required fields'),
           backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Validate that pickup and dropoff addresses are different
-    if (widget.pickupLocation.address.toLowerCase().trim() ==
-        widget.dropoffLocation.address.toLowerCase().trim()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Pickup and delivery addresses must be different. Please provide a different delivery address.',
-          ),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -2388,15 +2089,10 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
           children: [
             _buildSummaryRow('Package Size', selectedPackageSize),
             _buildSummaryRow('Distance', _distanceInfo?.distanceText ?? 'N/A'),
-            _buildSummaryRow('Base Price', '৳ ${_basePrice.toStringAsFixed(0)}'),
-            if (widget.selectedOffer != null)
-              _buildSummaryRow(
-                'Offer (${widget.selectedOffer!.title})',
-                '- ৳ ${_discountAmount.toStringAsFixed(0)}',
-              ),
+            _buildSummaryRow('Est. Time', _distanceInfo?.durationText ?? 'N/A'),
             _buildSummaryRow(
-              'Payable',
-              '৳ ${_finalPrice.toStringAsFixed(0)}',
+              'Price',
+              '৳ ${_estimatedPrice.toStringAsFixed(0)}',
             ),
             const Divider(),
             _buildSummaryRow('Sender', senderNameController.text),
@@ -2441,14 +2137,22 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     try {
       final helper = SharedpreferenceHelper();
       final userId = await helper.getUserId();
+      if (userId == null) {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
 
-      // Build order data first (before checking authentication)
-      Map<String, dynamic> orderData = {
+      final orderData = {
         'OrderId': orderId,
-        'UserId': userId ?? '',
+        'UserId': userId,
         'SenderName': senderNameController.text.trim(),
         'SenderPhone': senderPhoneController.text.trim(),
-        'SenderNID': senderNidController.text.trim(),
         'ReceiverName': recipientNameController.text.trim(),
         'ReceiverPhone': recipientPhoneController.text.trim(),
         'PickupAddress': widget.pickupLocation.address,
@@ -2457,12 +2161,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         'PackageDescription': packageDescriptionController.text.trim(),
         'Distance': _distanceInfo?.distanceText ?? 'N/A',
         'EstimatedTime': _distanceInfo?.durationText ?? 'N/A',
-        'OriginalPrice': _basePrice.toStringAsFixed(0),
-        'DiscountAmount': _discountAmount.toStringAsFixed(0),
-        'Price': _finalPrice.toStringAsFixed(0),
-        'AppliedOfferCode': widget.selectedOffer?.code ?? '',
-        'AppliedOfferTitle': widget.selectedOffer?.title ?? '',
-        'OfferNote': _discountNote,
+        'Price': _estimatedPrice.toStringAsFixed(0),
         'PaymentStatus': paymentStatus,
         'PaymentMethod': paymentMethod,
         'PaymentProvider': paymentProvider,
@@ -2472,114 +2171,35 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         'CreatedAt': DateTime.now().toIso8601String(),
       };
 
-      // Check if user is authenticated
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null || currentUser.isAnonymous) {
-        // User is not logged in
-        // Save order to admin collection so it persists
-        try {
-          await DatabaseMethods().addAdminOrder(orderData, orderId);
-        } catch (e) {
-          print('Error saving guest order: $e');
-        }
-        
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Order details saved!',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF2E7D32),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            ),
-          );
+      await DatabaseMethods().addUserOrder(orderData, userId, orderId);
+      await DatabaseMethods().addAdminOrder(orderData, orderId);
 
-          // Redirect to sign up with order details
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => widget.selectedOffer != null
-                  ? SignUpScreen(
-                      orderData: orderData,
-                      orderId: orderId,
-                      isFromOffer: true,
-                    )
-                  : LoginScreen(
-                      orderData: orderData,
-                      orderId: orderId,
-                      isFromOffer: false,
-                    ),
-            ),
-            (route) => false,
-          );
-        }
-        return;
-      }
-
-      // User is authenticated - save order to database
-      if (userId != null && userId.isNotEmpty) {
-        await DatabaseMethods().addUserOrder(orderData, userId, orderId);
-        await DatabaseMethods().addAdminOrder(orderData, orderId);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Order placed successfully!',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF2E7D32),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            ),
-          );
-
-          // Redirect to billing page for payment
-          final userEmail = currentUser.email ?? '';
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => BillingPage(
-                orderId: orderId,
-                amount: double.tryParse(
-                  orderData['Price']?.toString() ?? '0',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: Colors.white,
+                  size: 18,
                 ),
-                customerName: senderNameController.text.trim(),
-                customerPhone: senderPhoneController.text.trim(),
-                customerEmail: userEmail,
-                isFromOffer: widget.selectedOffer != null,
-              ),
+                SizedBox(width: 10),
+                Text(
+                  'Order placed successfully!',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
-          );
-        }
+            backgroundColor: const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          ),
+        );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {

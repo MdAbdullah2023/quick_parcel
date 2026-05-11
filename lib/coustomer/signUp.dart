@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:quick_parcel/coustomer/bottomnav.dart';
 import 'package:quick_parcel/coustomer/login.dart';
-import 'package:quick_parcel/coustomer/billing_page.dart';
 import 'package:quick_parcel/services/CustomTextField.dart';
 import 'package:quick_parcel/services/widget_support.dart';
 import 'package:random_string/random_string.dart';
@@ -11,16 +10,7 @@ import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 
 class SignUpScreen extends StatefulWidget {
-  final Map<String, dynamic>? orderData;
-  final String? orderId;
-  final bool isFromOffer;
-
-  const SignUpScreen({
-    super.key,
-    this.orderData,
-    this.orderId,
-    this.isFromOffer = false,
-  });
+  const SignUpScreen({super.key});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -38,17 +28,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _agreeToTerms = false;
   bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Auto-fill form with order data if coming from offer
-    if (widget.isFromOffer && widget.orderData != null) {
-      _nameController.text = widget.orderData!['SenderName'] ?? '';
-      _phoneController.text = widget.orderData!['SenderPhone'] ?? '';
-      _nidController.text = widget.orderData!['SenderNID'] ?? '';
-    }
-  }
 
   @override
   void dispose() {
@@ -122,21 +101,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailController.text.trim(),
       );
 
-      // Link guest order to user account if coming from offer.
-      if (widget.isFromOffer &&
-          widget.orderId != null &&
-          widget.orderId!.isNotEmpty) {
-        try {
-          await DatabaseMethods().linkOrderToUser(
-            userId: customId,
-            orderId: widget.orderId!,
-            fallbackOrderData: widget.orderData,
-          );
-        } catch (e) {
-          print('Error linking order to user: $e');
-        }
-      }
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -146,28 +110,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         );
 
-        // If coming from an offer with order data, go to billing page
-        if (widget.isFromOffer && widget.orderData != null && widget.orderId != null) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => BillingPage(
-                orderId: widget.orderId,
-                amount: double.tryParse(
-                  widget.orderData!['Price']?.toString() ?? '0',
-                ),
-                customerName: _nameController.text.trim(),
-                customerPhone: _phoneController.text.trim(),
-                customerEmail: _emailController.text.trim(),
-                isFromOffer: true,
-              ),
-            ),
-          );
-        } else {
-          // Normal signup, go to BottomNav
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const BottomNav()),
-          );
-        }
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const BottomNav()));
       }
     } on FirebaseAuthException catch (e) {
       String message = 'Registration failed';

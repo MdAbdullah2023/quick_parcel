@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
@@ -44,24 +43,15 @@ class _MyPackagesPageState extends State<MyPackagesPage>
 
   Future<void> _loadUser() async {
     final uid = await SharedpreferenceHelper().getUserId();
-    if (!mounted) return;
-    setState(() {
-      _userId = uid;
-      _loadingUser = false;
-    });
+    if (mounted) {
+      setState(() {
+        _userId = uid;
+        _loadingUser = false;
+      });
+    }
   }
 
-  Future<void> _copyOrderId(String orderId) async {
-    if (orderId.trim().isEmpty || orderId == 'No Order ID') return;
-    await Clipboard.setData(ClipboardData(text: orderId));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Order number copied'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
+  //  status helpers ─
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
@@ -129,17 +119,9 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     }
   }
 
-  String _formatDate(dynamic createdAt) {
+  String _formatDate(String iso) {
     try {
-      DateTime dt;
-      if (createdAt is Timestamp) {
-        dt = createdAt.toDate();
-      } else if (createdAt is DateTime) {
-        dt = createdAt;
-      } else {
-        dt = DateTime.parse(createdAt.toString());
-      }
-
+      final dt = DateTime.parse(iso);
       const months = [
         'Jan',
         'Feb',
@@ -156,23 +138,27 @@ class _MyPackagesPageState extends State<MyPackagesPage>
       ];
       return '${dt.day} ${months[dt.month - 1]} ${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (_) {
-      return createdAt?.toString() ?? '';
+      return iso;
     }
   }
 
-  List<QueryDocumentSnapshot<Object?>> _filteredOrders(
-    List<QueryDocumentSnapshot<Object?>> allDocs,
+  //  filter orders by tab
+
+  List<QueryDocumentSnapshot> _filteredOrders(
+    List<QueryDocumentSnapshot> docs,
     int tabIndex,
   ) {
-    if (tabIndex == 0) return allDocs;
-
-    final selected = _tabs[tabIndex].toLowerCase();
-    return allDocs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      final status = (data['Status'] ?? '').toString().toLowerCase();
-      return status == selected;
+    if (tabIndex == 0) return docs;
+    final filter = _tabs[tabIndex].toLowerCase();
+    return docs.where((d) {
+      final status = ((d.data() as Map)['Status'] ?? '')
+          .toString()
+          .toLowerCase();
+      return status == filter;
     }).toList();
   }
+
+  //  build
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +166,7 @@ class _MyPackagesPageState extends State<MyPackagesPage>
       backgroundColor: _bg,
       body: Column(
         children: [
+          //  Header ─
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -191,9 +178,10 @@ class _MyPackagesPageState extends State<MyPackagesPage>
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
                 child: Column(
                   children: [
+                    // Title row
                     Row(
                       children: [
                         Container(
@@ -242,6 +230,7 @@ class _MyPackagesPageState extends State<MyPackagesPage>
                       ],
                     ),
                     const SizedBox(height: 16),
+                    // Tab bar
                     TabBar(
                       controller: _tabController,
                       isScrollable: true,
@@ -267,6 +256,8 @@ class _MyPackagesPageState extends State<MyPackagesPage>
               ),
             ),
           ),
+
+          //  Body ─
           Expanded(
             child: _loadingUser
                 ? const Center(
@@ -285,14 +276,12 @@ class _MyPackagesPageState extends State<MyPackagesPage>
                           child: CircularProgressIndicator(color: _primary),
                         );
                       }
-
                       if (snapshot.hasError) {
                         return _emptyState(
                           icon: Icons.error_outline_rounded,
                           message: 'Failed to load orders',
                         );
                       }
-
                       final allDocs = snapshot.data?.docs ?? [];
                       return TabBarView(
                         controller: _tabController,
@@ -306,7 +295,6 @@ class _MyPackagesPageState extends State<MyPackagesPage>
                                   : 'No ${_tabs[i].toLowerCase()} orders',
                             );
                           }
-
                           return ListView.builder(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                             itemCount: filtered.length,
@@ -324,18 +312,20 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     );
   }
 
+  //  order card ─
+
   Widget _orderCard(Map<String, dynamic> data) {
-    final status = (data['Status'] ?? 'Pending').toString();
-    final orderId = (data['OrderId'] ?? 'No Order ID').toString();
-    final created = data['CreatedAt'];
-    final price = (data['Price'] ?? '0').toString();
-    final pickup = (data['PickupAddress'] ?? '').toString();
-    final dropoff = (data['DropoffAddress'] ?? '').toString();
-    final sender = (data['SenderName'] ?? '').toString();
-    final receiver = (data['ReceiverName'] ?? '').toString();
-    final pkgSize = (data['PackageSize'] ?? '').toString();
-    final distance = (data['Distance'] ?? '').toString();
-    final photoUrl = (data['PackagePhoto'] ?? '').toString();
+    final status = data['Status'] ?? 'Pending';
+    final orderId = data['OrderId'] ?? '';
+    final created = data['CreatedAt'] ?? '';
+    final price = data['Price'] ?? '0';
+    final pickup = data['PickupAddress'] ?? '';
+    final dropoff = data['DropoffAddress'] ?? '';
+    final sender = data['SenderName'] ?? '';
+    final receiver = data['ReceiverName'] ?? '';
+    final pkgSize = data['PackageSize'] ?? '';
+    final distance = data['Distance'] ?? '';
+    final photoUrl = data['PackagePhoto'] ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -352,6 +342,7 @@ class _MyPackagesPageState extends State<MyPackagesPage>
       ),
       child: Column(
         children: [
+          //  card header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
@@ -369,50 +360,35 @@ class _MyPackagesPageState extends State<MyPackagesPage>
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          orderId,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1A1A2E),
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => _copyOrderId(orderId),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.copy_rounded,
-                            size: 16,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    orderId,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 _statusBadge(status),
               ],
             ),
           ),
+
+          //  package image ─
           if (photoUrl.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
               child: MyPackagesWidgets.packageImage(photoUrl),
             ),
+
+          //  route
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: _routeRow(pickup, dropoff),
           ),
+
+          //  details grid ─
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
@@ -433,11 +409,15 @@ class _MyPackagesPageState extends State<MyPackagesPage>
               ],
             ),
           ),
+
+          //  progress tracker ─
           if (status.toLowerCase() != 'cancelled')
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: _progressTracker(status),
             ),
+
+          //  footer ─
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Row(
@@ -478,8 +458,12 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     );
   }
 
+  //  route widget ─
+
   Widget _routeRow(String pickup, String dropoff) =>
       MyPackagesWidgets.routeRow(pickup: pickup, dropoff: dropoff);
+
+  //  progress tracker
 
   Widget _progressTracker(String status) {
     final steps = ['Pending', 'Confirmed', 'In Transit', 'Delivered'];
@@ -488,6 +472,7 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     return Row(
       children: List.generate(steps.length * 2 - 1, (i) {
         if (i.isOdd) {
+          // connector line
           final stepIdx = i ~/ 2;
           final isDone = stepIdx < currentStep;
           return Expanded(
@@ -497,7 +482,6 @@ class _MyPackagesPageState extends State<MyPackagesPage>
             ),
           );
         }
-
         final stepIdx = i ~/ 2;
         final isDone = stepIdx <= currentStep;
         final isCurrent = stepIdx == currentStep;
@@ -559,11 +543,19 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     }
   }
 
+  //  detail chip
+
   Widget _detailChip(IconData icon, String label) =>
       MyPackagesWidgets.detailChip(icon: icon, label: label);
 
-  Widget _statusBadge(String status) =>
-      MyPackagesWidgets.statusBadge(status: status, statusColor: _statusColor(status));
+  //  status badge ─
+
+  Widget _statusBadge(String status) => MyPackagesWidgets.statusBadge(
+    status: status,
+    statusColor: _statusColor(status),
+  );
+
+  //  empty state
 
   Widget _emptyState({required IconData icon, required String message}) =>
       MyPackagesWidgets.emptyState(icon: icon, message: message);

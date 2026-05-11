@@ -5,9 +5,6 @@ import 'package:flutter_sslcommerz/model/SSLCSdkType.dart';
 import 'package:flutter_sslcommerz/model/SSLCTransactionInfoModel.dart';
 import 'package:flutter_sslcommerz/model/SSLCommerzInitialization.dart';
 import 'package:flutter_sslcommerz/model/SSLCurrencyType.dart';
-import 'package:quick_parcel/coustomer/bottomnav.dart';
-import 'package:quick_parcel/services/database.dart';
-import 'package:quick_parcel/services/shared_pref.dart';
 
 class BillingResult {
   final String orderId;
@@ -66,7 +63,6 @@ class BillingPage extends StatefulWidget {
   final String? customerPhone;
   final String customerEmail;
   final List<UnpaidBillItem>? unpaidBills;
-  final bool isFromOffer;
 
   const BillingPage({
     super.key,
@@ -75,7 +71,6 @@ class BillingPage extends StatefulWidget {
     required this.customerName,
     required this.customerPhone,
     required this.customerEmail,
-    this.isFromOffer = false,
   }) : unpaidBills = null;
 
   const BillingPage.unpaid({
@@ -85,8 +80,7 @@ class BillingPage extends StatefulWidget {
   }) : orderId = null,
        amount = null,
        customerName = null,
-       customerPhone = null,
-       isFromOffer = false;
+       customerPhone = null;
 
   @override
   State<BillingPage> createState() => _BillingPageState();
@@ -124,16 +118,16 @@ class _BillingPageState extends State<BillingPage> {
 
   Future<void> _handlePayment() async {
     if (_paymentMethod == 'cash') {
-      final billingResult = BillingResult(
-        orderId: _selectedBill.orderId,
-        paymentStatus: 'CashOnDelivery',
-        paymentMethod: 'Cash',
-        paymentProvider: 'Cash',
-        paidAmount: _selectedBill.amount,
+      Navigator.pop(
+        context,
+        BillingResult(
+          orderId: _selectedBill.orderId,
+          paymentStatus: 'CashOnDelivery',
+          paymentMethod: 'Cash',
+          paymentProvider: 'Cash',
+          paidAmount: _selectedBill.amount,
+        ),
       );
-      
-      // Save payment and navigate based on isFromOffer
-      await _savePaymentAndNavigateHome(billingResult);
       return;
     }
 
@@ -172,17 +166,17 @@ class _BillingPageState extends State<BillingPage> {
         return;
       }
 
-      final billingResult = BillingResult(
-        orderId: _selectedBill.orderId,
-        paymentStatus: 'Paid',
-        paymentMethod: 'Online',
-        paymentProvider: 'SSLCommerz',
-        transactionId: result.tranId,
-        paidAmount: _selectedBill.amount,
+      Navigator.pop(
+        context,
+        BillingResult(
+          orderId: _selectedBill.orderId,
+          paymentStatus: 'Paid',
+          paymentMethod: 'Online',
+          paymentProvider: 'SSLCommerz',
+          transactionId: result.tranId,
+          paidAmount: _selectedBill.amount,
+        ),
       );
-      
-      // Save payment and navigate based on isFromOffer
-      await _savePaymentAndNavigateHome(billingResult);
     } on MissingPluginException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -201,74 +195,6 @@ class _BillingPageState extends State<BillingPage> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  Future<void> _savePaymentAndNavigateHome(BillingResult result) async {
-    try {
-      setState(() => _loading = true);
-      
-      // Get user ID for updating user's order
-      String? userId;
-      try {
-        userId = await SharedpreferenceHelper().getUserId();
-      } catch (e) {
-        print('Could not get userId from shared preferences: $e');
-      }
-
-      // For offer flows (or any edge case), make sure this order is linked
-      // under users/{userId}/Order before/with payment update.
-      if (userId != null && userId.isNotEmpty) {
-        await DatabaseMethods().linkOrderToUser(
-          userId: userId,
-          orderId: result.orderId,
-        );
-      }
-      
-      // Update order with payment details
-      await DatabaseMethods().updateOrderPayment(
-        orderId: result.orderId,
-        paymentStatus: result.paymentStatus,
-        paymentMethod: result.paymentMethod,
-        paymentProvider: result.paymentProvider,
-        transactionId: result.transactionId ?? '',
-        paidAmount: result.paidAmount,
-        userId: userId,
-      );
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('✅ Payment successful! Order placed.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        
-        // Wait a moment to show the success message
-        await Future.delayed(const Duration(milliseconds: 1500));
-        
-        if (mounted) {
-          // Always navigate to home page for both guest and logged-in users
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => BottomNav()),
-            (route) => false,
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text('Error saving payment: $e'),
-          ),
-        );
-      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);

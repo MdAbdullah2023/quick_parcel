@@ -102,41 +102,6 @@ class DatabaseMethods {
         .set(userInfoMap);
   }
 
-  // Ensure an order exists under users/{userId}/Order/{orderId}
-  // by syncing it from the admin Order collection when needed.
-  Future<void> linkOrderToUser({
-    required String userId,
-    required String orderId,
-    Map<String, dynamic>? fallbackOrderData,
-  }) async {
-    if (userId.isEmpty || orderId.isEmpty) return;
-
-    Map<String, dynamic>? sourceData = fallbackOrderData;
-
-    if (sourceData == null) {
-      final adminOrder = await _firestore.collection('Order').doc(orderId).get();
-      if (adminOrder.exists) {
-        sourceData = adminOrder.data();
-      }
-    }
-
-    if (sourceData == null) return;
-
-    sourceData['UserId'] = userId;
-
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('Order')
-        .doc(orderId)
-        .set(sourceData, SetOptions(merge: true));
-
-    await _firestore
-        .collection('Order')
-        .doc(orderId)
-        .set({'UserId': userId}, SetOptions(merge: true));
-  }
-
   // Stream of all orders for a user (real-time)
   Stream<QuerySnapshot> getUserOrders(String userId) {
     return FirebaseFirestore.instance
@@ -145,48 +110,5 @@ class DatabaseMethods {
         .collection("Order")
         .orderBy("CreatedAt", descending: true)
         .snapshots();
-  }
-
-  // Update order payment information
-  Future<void> updateOrderPayment({
-    required String orderId,
-    required String paymentStatus,
-    required String paymentMethod,
-    required String paymentProvider,
-    required String transactionId,
-    required double paidAmount,
-    String? userId,
-  }) async {
-    try {
-      final paymentData = {
-        'PaymentStatus': paymentStatus,
-        'PaymentMethod': paymentMethod,
-        'PaymentProvider': paymentProvider,
-        'TransactionId': transactionId,
-        'PaidAmount': paidAmount.toStringAsFixed(0),
-        'UpdatedAt': DateTime.now().toIso8601String(),
-      };
-
-      // Update admin order (merge: true ensures it works even if doc doesn't exist fully)
-      await FirebaseFirestore.instance
-          .collection("Order")
-          .doc(orderId)
-          .set(paymentData, SetOptions(merge: true));
-
-      // Update user order if userId is provided
-      if (userId != null && userId.isNotEmpty) {
-        await FirebaseFirestore.instance
-            .collection("users")
-            .doc(userId)
-            .collection("Order")
-            .doc(orderId)
-            .set(paymentData, SetOptions(merge: true));
-      }
-
-      print('Order payment updated successfully');
-    } catch (e) {
-      print('Error updating order payment: $e');
-      rethrow;
-    }
   }
 }

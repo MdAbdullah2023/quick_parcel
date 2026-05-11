@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
 
@@ -37,18 +36,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         _loadingUser = false;
       });
     }
-  }
-
-  Future<void> _copyOrderId(String orderId) async {
-    if (orderId.trim().isEmpty || orderId == 'No Tracking ID') return;
-    await Clipboard.setData(ClipboardData(text: orderId));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Order number copied'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   //  stream helpers ─
@@ -115,39 +102,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         return Icons.cancel_outlined;
       default:
         return Icons.help_outline_rounded;
-    }
-  }
-
-  String _paymentText(String paymentStatus) {
-    switch (paymentStatus.toLowerCase()) {
-      case 'paid':
-        return 'Online Payment Done';
-      case 'cashondelivery':
-        return 'Cash on Delivery';
-      default:
-        return 'Payment Pending - Please pay';
-    }
-  }
-
-  Color _paymentColor(String paymentStatus) {
-    switch (paymentStatus.toLowerCase()) {
-      case 'paid':
-        return const Color(0xFF16A34A);
-      case 'cashondelivery':
-        return const Color(0xFF2563EB);
-      default:
-        return const Color(0xFFF59E0B);
-    }
-  }
-
-  IconData _paymentIcon(String paymentStatus) {
-    switch (paymentStatus.toLowerCase()) {
-      case 'paid':
-        return Icons.verified_rounded;
-      case 'cashondelivery':
-        return Icons.payments_rounded;
-      default:
-        return Icons.warning_amber_rounded;
     }
   }
 
@@ -324,7 +278,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     final receiver = (data['ReceiverName'] ?? '').toString();
     final packageSize = (data['PackageSize'] ?? '').toString();
     final distance = (data['Distance'] ?? '').toString();
-    final paymentStatus = (data['PaymentStatus'] ?? '').toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -355,37 +308,16 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                 Icon(_statusIcon(status), color: _statusColor(status), size: 20),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          orderId,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1A1A2E),
-                            letterSpacing: 0.3,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => _copyOrderId(orderId.toString()),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.copy_rounded,
-                            size: 16,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    orderId,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 _statusBadge(status),
               ],
             ),
@@ -415,38 +347,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                 const SizedBox(width: 8),
                 _detailChip(Icons.route_outlined, distance),
               ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _paymentColor(paymentStatus).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _paymentIcon(paymentStatus),
-                      color: _paymentColor(paymentStatus),
-                      size: 15,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _paymentText(paymentStatus),
-                      style: TextStyle(
-                        color: _paymentColor(paymentStatus),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ),
 

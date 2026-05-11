@@ -1092,7 +1092,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                               ? Image.network(
                                                   _photoUrl!,
                                                   fit: BoxFit.cover,
-                                                  errorBuilder: (_, _, _) =>
+                                                  errorBuilder: (_, __, ___) =>
                                                       _defaultAvatar(),
                                                 )
                                               : _defaultAvatar()),
