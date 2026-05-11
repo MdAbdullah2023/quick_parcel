@@ -1,0 +1,618 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_sslcommerz/sslcommerz.dart';
+import 'package:flutter_sslcommerz/model/SSLCSdkType.dart';
+import 'package:flutter_sslcommerz/model/SSLCTransactionInfoModel.dart';
+import 'package:flutter_sslcommerz/model/SSLCommerzInitialization.dart';
+import 'package:flutter_sslcommerz/model/SSLCurrencyType.dart';
+import 'package:quick_parcel/coustomer/bottomnav.dart';
+import 'package:quick_parcel/services/database.dart';
+import 'package:quick_parcel/services/shared_pref.dart';
+
+class BillingResult {
+  final String orderId;
+  final String paymentStatus;
+  final String paymentMethod;
+  final String paymentProvider;
+  final String? transactionId;
+  final double paidAmount;
+
+  const BillingResult({
+    required this.orderId,
+    required this.paymentStatus,
+    required this.paymentMethod,
+    required this.paymentProvider,
+    required this.paidAmount,
+    this.transactionId,
+  });
+}
+
+class UnpaidBillItem {
+  final String orderId;
+  final double amount;
+  final String senderName;
+  final String senderPhone;
+  final String receiverName;
+  final String receiverPhone;
+  final String pickupAddress;
+  final String dropoffAddress;
+  final String packageSize;
+  final String packageDescription;
+  final String distance;
+  final String estimatedTime;
+  final String createdAt;
+
+  const UnpaidBillItem({
+    required this.orderId,
+    required this.amount,
+    required this.senderName,
+    required this.senderPhone,
+    required this.receiverName,
+    required this.receiverPhone,
+    required this.pickupAddress,
+    required this.dropoffAddress,
+    required this.packageSize,
+    required this.packageDescription,
+    required this.distance,
+    required this.estimatedTime,
+    required this.createdAt,
+  });
+}
+
+class BillingPage extends StatefulWidget {
+  final String? orderId;
+  final double? amount;
+  final String? customerName;
+  final String? customerPhone;
+  final String customerEmail;
+  final List<UnpaidBillItem>? unpaidBills;
+  final bool isFromOffer;
+
+  const BillingPage({
+    super.key,
+    required this.orderId,
+    required this.amount,
+    required this.customerName,
+    required this.customerPhone,
+    required this.customerEmail,
+    this.isFromOffer = false,
+  }) : unpaidBills = null;
+
+  const BillingPage.unpaid({
+    super.key,
+    required this.unpaidBills,
+    required this.customerEmail,
+  }) : orderId = null,
+       amount = null,
+       customerName = null,
+       customerPhone = null,
+       isFromOffer = false;
+
+  @override
+  State<BillingPage> createState() => _BillingPageState();
+}
+
+class _BillingPageState extends State<BillingPage> {
+  String _paymentMethod = 'cash';
+  bool _loading = false;
+  int _selectedBillIndex = 0;
+
+  bool get _isUnpaidListMode =>
+      widget.unpaidBills != null && widget.unpaidBills!.isNotEmpty;
+
+  UnpaidBillItem get _selectedBill {
+    if (_isUnpaidListMode) {
+      return widget.unpaidBills![_selectedBillIndex];
+    }
+
+    return UnpaidBillItem(
+      orderId: widget.orderId ?? '',
+      amount: widget.amount ?? 0,
+      senderName: widget.customerName ?? '',
+      senderPhone: widget.customerPhone ?? '',
+      receiverName: '',
+      receiverPhone: '',
+      pickupAddress: '',
+      dropoffAddress: '',
+      packageSize: '',
+      packageDescription: '',
+      distance: '',
+      estimatedTime: '',
+      createdAt: '',
+    );
+  }
+
+  Future<void> _handlePayment() async {
+    if (_paymentMethod == 'cash') {
+      final billingResult = BillingResult(
+        orderId: _selectedBill.orderId,
+        paymentStatus: 'CashOnDelivery',
+        paymentMethod: 'Cash',
+        paymentProvider: 'Cash',
+        paidAmount: _selectedBill.amount,
+      );
+      
+      // Save payment and navigate based on isFromOffer
+      await _savePaymentAndNavigateHome(billingResult);
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final sslcommerz = Sslcommerz(
+        initializer: SSLCommerzInitialization(
+          multi_card_name: 'visa,master,bkash,rocket',
+          currency: SSLCurrencyType.BDT,
+          product_category: 'Package Delivery',
+          sdkType: SSLCSdkType.TESTBOX,
+          store_id: 'abdul67f7d33d97f1e',
+          store_passwd: 'abdul67f7d33d97f1e@ssl',
+          total_amount: _selectedBill.amount,
+          tran_id: _selectedBill.orderId,
+        ),
+      );
+
+      final SSLCTransactionInfoModel result = await sslcommerz.payNow();
+      final status = (result.status ?? '').toLowerCase();
+      final isSuccess = status == 'valid' || status == 'validated';
+
+      if (!isSuccess) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                status == 'failed'
+                    ? 'Payment failed. Please try again.'
+                    : 'Payment cancelled by user',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final billingResult = BillingResult(
+        orderId: _selectedBill.orderId,
+        paymentStatus: 'Paid',
+        paymentMethod: 'Online',
+        paymentProvider: 'SSLCommerz',
+        transactionId: result.tranId,
+        paidAmount: _selectedBill.amount,
+      );
+      
+      // Save payment and navigate based on isFromOffer
+      await _savePaymentAndNavigateHome(billingResult);
+    } on MissingPluginException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Payment plugin not initialized. Please fully restart the app.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment session error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _savePaymentAndNavigateHome(BillingResult result) async {
+    try {
+      setState(() => _loading = true);
+      
+      // Get user ID for updating user's order
+      String? userId;
+      try {
+        userId = await SharedpreferenceHelper().getUserId();
+      } catch (e) {
+        print('Could not get userId from shared preferences: $e');
+      }
+
+      // For offer flows (or any edge case), make sure this order is linked
+      // under users/{userId}/Order before/with payment update.
+      if (userId != null && userId.isNotEmpty) {
+        await DatabaseMethods().linkOrderToUser(
+          userId: userId,
+          orderId: result.orderId,
+        );
+      }
+      
+      // Update order with payment details
+      await DatabaseMethods().updateOrderPayment(
+        orderId: result.orderId,
+        paymentStatus: result.paymentStatus,
+        paymentMethod: result.paymentMethod,
+        paymentProvider: result.paymentProvider,
+        transactionId: result.transactionId ?? '',
+        paidAmount: result.paidAmount,
+        userId: userId,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('✅ Payment successful! Order placed.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Wait a moment to show the success message
+        await Future.delayed(const Duration(milliseconds: 1500));
+        
+        if (mounted) {
+          // Always navigate to home page for both guest and logged-in users
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => BottomNav()),
+            (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Error saving payment: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F6FB),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0D7D8F),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text('Billing & Payment'),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0D7D8F), Color(0xFF18A6BD)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Total Bill',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '৳ ${_selectedBill.amount.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Order: ${_selectedBill.orderId}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              if (_isUnpaidListMode) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Unpaid Bills',
+                  style: TextStyle(
+                    color: Color(0xFF12324A),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: (widget.unpaidBills!.length * 86.0).clamp(90.0, 280.0),
+                  child: ListView.builder(
+                    itemCount: widget.unpaidBills!.length,
+                    itemBuilder: (context, index) {
+                      final bill = widget.unpaidBills![index];
+                      final selected = index == _selectedBillIndex;
+
+                      return InkWell(
+                        onTap: () => setState(() => _selectedBillIndex = index),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected
+                                  ? const Color(0xFF0D7D8F)
+                                  : const Color(0xFFDCE5EE),
+                              width: selected ? 1.6 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                selected
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                color: const Color(0xFF0D7D8F),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Order: ${bill.orderId}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF12324A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${bill.senderName} -> ${bill.receiverName}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blueGrey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '৳ ${bill.amount.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  color: Color(0xFF0D7D8F),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFDCE5EE)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Selected Order Details',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF12324A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _detailText(
+                        'Sender',
+                        '${_selectedBill.senderName} (${_selectedBill.senderPhone})',
+                      ),
+                      _detailText(
+                        'Receiver',
+                        '${_selectedBill.receiverName} (${_selectedBill.receiverPhone})',
+                      ),
+                      _detailText('Pickup', _selectedBill.pickupAddress),
+                      _detailText('Dropoff', _selectedBill.dropoffAddress),
+                      _detailText(
+                        'Package',
+                        _selectedBill.packageDescription.isEmpty
+                            ? _selectedBill.packageSize
+                            : '${_selectedBill.packageSize} | ${_selectedBill.packageDescription}',
+                      ),
+                      _detailText(
+                        'Distance',
+                        '${_selectedBill.distance} | ${_selectedBill.estimatedTime}',
+                      ),
+                      _detailText('Created', _formatDateTime(_selectedBill.createdAt)),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              const SizedBox(height: 14),
+              const Text(
+                'Select Payment Type',
+                style: TextStyle(
+                  color: Color(0xFF12324A),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _methodCard(
+                title: 'Cash on Delivery',
+                subtitle: 'Pay when parcel is delivered',
+                value: 'cash',
+                icon: Icons.payments_outlined,
+              ),
+              const SizedBox(height: 12),
+              _methodCard(
+                title: 'Online Payment (SSLCommerz)',
+                subtitle: 'bKash, Rocket, Visa/Mastercard',
+                value: 'online',
+                icon: Icons.credit_score_outlined,
+              ),
+              const SizedBox(height: 26),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _handlePayment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D7D8F),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _paymentMethod == 'cash'
+                              ? 'Confirm Cash Order'
+                              : 'Pay Now',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _methodCard({
+    required String title,
+    required String subtitle,
+    required String value,
+    required IconData icon,
+  }) {
+    final selected = _paymentMethod == value;
+    return InkWell(
+      onTap: () => setState(() => _paymentMethod = value),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? const Color(0xFF0D7D8F) : const Color(0xFFD8E3ED),
+            width: selected ? 1.8 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: const Color(0xFFEAF6F8),
+              child: Icon(icon, color: const Color(0xFF0D7D8F)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF12324A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.blueGrey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Radio<String>(
+              value: value,
+              groupValue: _paymentMethod,
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() => _paymentMethod = v);
+                }
+              },
+              activeColor: const Color(0xFF0D7D8F),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailText(String label, String value) {
+    final cleanValue = value.trim().isEmpty ? 'N/A' : value.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        '$label: $cleanValue',
+        style: TextStyle(fontSize: 11.5, color: Colors.blueGrey.shade700),
+      ),
+    );
+  }
+
+  String _formatDateTime(String raw) {
+    if (raw.trim().isEmpty) return 'N/A';
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    final local = parsed.toLocal();
+    final twoDigitMonth = local.month.toString().padLeft(2, '0');
+    final twoDigitDay = local.day.toString().padLeft(2, '0');
+    final twoDigitHour = local.hour.toString().padLeft(2, '0');
+    final twoDigitMinute = local.minute.toString().padLeft(2, '0');
+    return '${local.year}-$twoDigitMonth-$twoDigitDay $twoDigitHour:$twoDigitMinute';
+  }
+}
