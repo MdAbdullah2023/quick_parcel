@@ -2,10 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:quick_parcel/coustomer/login.dart';
+import 'package:quick_parcel/coustomer/find_driver.dart';
+import 'package:quick_parcel/coustomer/signUp.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/google_places_service.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
+import 'package:quick_parcel/models/order_model.dart';
+import 'package:quick_parcel/services/pending_order_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,7 +25,7 @@ class _SendPackageState extends State<SendPackage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -46,7 +50,7 @@ class _SendPackageState extends State<SendPackage> {
                 child: Text(
                   'Types of deliveries',
                   style: TextStyle(
-                    color: const Color(0xFF0D7D8F),
+                    color: Theme.of(context).primaryColor,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -88,20 +92,20 @@ class _SendPackageState extends State<SendPackage> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: const Color(0xFF0D7D8F).withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Popular ways to use Parcel',
                       style: TextStyle(
-                        color: Color(0xFF0D7D8F),
+                        color: Theme.of(context).primaryColor,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -110,7 +114,7 @@ class _SendPackageState extends State<SendPackage> {
                     Text(
                       'Explore some of the many items you can send or receive with Parcel.',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).textTheme.bodyMedium!.color,
                         fontSize: 14,
                       ),
                     ),
@@ -671,7 +675,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -716,18 +720,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back,
-              color: Color(0xFF0D7D8F),
+              color: Theme.of(context).primaryColor,
               size: 28,
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
                 "Where's it going?",
                 style: TextStyle(
-                  color: Color(0xFF0D7D8F),
+                  color: Theme.of(context).primaryColor,
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -741,6 +745,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildPickupTimeSelector() {
+    final theme = Theme.of(context);
+    final onPrimary = theme.colorScheme.onPrimary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GestureDetector(
@@ -748,11 +755,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF0D7D8F),
+            color: Theme.of(context).primaryColor,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0D7D8F).withOpacity(0.2),
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -761,22 +768,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.access_time, color: Colors.white, size: 20),
+              Icon(Icons.access_time, color: onPrimary, size: 20),
               const SizedBox(width: 8),
               Text(
                 selectedPickupTime ?? 'Pick up now',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.white,
-                size: 20,
-              ),
+              Icon(Icons.keyboard_arrow_down, color: onPrimary, size: 20),
             ],
           ),
         ),
@@ -785,14 +788,20 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildLocationInputs() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final shadowColor = isDark
+        ? Colors.black.withOpacity(0.4)
+        : Colors.black.withOpacity(0.08);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: shadowColor,
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -821,7 +830,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           // Divider
           Container(
             height: 1,
-            color: Colors.grey.shade200,
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
             margin: const EdgeInsets.symmetric(horizontal: 16),
           ),
 
@@ -857,6 +866,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     required IconData locationIcon,
     required bool showCheckmark,
   }) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ?? onSurface.withOpacity(0.6);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
@@ -864,7 +878,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           // Location icon
           Icon(
             locationIcon,
-            color: isActive ? const Color(0xFF0D7D8F) : Colors.grey.shade400,
+            color: isActive ? theme.primaryColor : secondaryText,
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -874,16 +888,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             child: TextField(
               controller: controller,
               focusNode: focusNode,
-              style: const TextStyle(
-                color: Colors.black87,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge!.color,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
                 hintText: hint,
                 hintStyle: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: secondaryText,
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                 ),
@@ -893,19 +909,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
           // Action buttons
           if (isSearching)
-            const SizedBox(
+            SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Color(0xFF0D7D8F),
+                color: theme.primaryColor,
               ),
             )
           else if (showCheckmark && controller.text.isEmpty)
             Icon(Icons.check_circle, color: Colors.green, size: 24)
           else if (controller.text.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close, color: Colors.grey, size: 20),
+              icon: Icon(Icons.close, color: secondaryText, size: 20),
               onPressed: onClear,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -916,14 +932,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildSearchResults(List<PlacePrediction> predictions, bool isPickup) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final shadowColor = isDark
+        ? Colors.black.withOpacity(0.4)
+        : Colors.black.withOpacity(0.12);
+    final surface = theme.colorScheme.surface;
+    final onSurface = theme.colorScheme.onSurface;
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ?? onSurface.withOpacity(0.7);
+    final dividerColor = theme.dividerColor;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: shadowColor,
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -936,20 +963,20 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             child: Text(
               'Search Results',
               style: TextStyle(
-                color: Colors.grey.shade700,
+                color: secondaryText,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
               ),
             ),
           ),
-          Divider(height: 1, color: Colors.grey.shade200),
+          Divider(height: 1, color: dividerColor),
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: predictions.length,
             separatorBuilder: (context, index) =>
-                Divider(height: 1, color: Colors.grey.shade100),
+                Divider(height: 1, color: dividerColor.withOpacity(0.7)),
             itemBuilder: (context, index) {
               final prediction = predictions[index];
               return ListTile(
@@ -960,7 +987,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5F7),
+                    color: theme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -971,8 +998,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ),
                 title: Text(
                   prediction.mainText,
-                  style: const TextStyle(
-                    color: Colors.black87,
+                  style: TextStyle(
+                    color: onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -981,13 +1008,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ),
                 subtitle: Text(
                   prediction.secondaryText,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  style: TextStyle(color: secondaryText, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_right,
-                  color: Colors.grey,
+                  color: secondaryText,
                   size: 20,
                 ),
                 onTap: () => _selectPlace(prediction, isPickup),
@@ -1042,7 +1069,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               Text(
                 'Popular destinations',
                 style: TextStyle(
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).textTheme.bodySmall!.color,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
@@ -1080,44 +1107,51 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     required bool isLoading,
     required VoidCallback? onTap,
   }) {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
+        ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F5F7),
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: isLoading
-              ? const SizedBox(
+              ? SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF0D7D8F),
+                    color: Theme.of(context).primaryColor,
                   ),
                 )
-              : Icon(icon, color: const Color(0xFF0D7D8F), size: 24),
+              : Icon(icon, color: Theme.of(context).primaryColor, size: 24),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.black87,
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyLarge!.color,
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: TextStyle(color: secondaryText, fontSize: 12),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 24),
+        trailing: Icon(Icons.chevron_right, color: secondaryText, size: 24),
         onTap: onTap,
       ),
     );
@@ -1128,6 +1162,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     String subtitle,
     IconData icon,
   ) {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     // Hardcoded fallback coordinates for popular destinations
     final Map<String, Map<String, dynamic>> fallbackLocations = {
       'Rajshahi University of Engineering & Technology': {
@@ -1153,24 +1192,24 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: theme.primaryColor.withOpacity(0.1)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: theme.primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: Colors.grey.shade700, size: 20),
+          child: Icon(icon, color: theme.primaryColor, size: 20),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.black87,
+          style: TextStyle(
+            color: theme.textTheme.bodyLarge!.color,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -1179,9 +1218,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: TextStyle(color: secondaryText, fontSize: 12),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        trailing: Icon(Icons.chevron_right, color: secondaryText, size: 20),
         onTap: () async {
           // Search for this place
           final predictions = await _placesService.searchPlaces(title);
@@ -1229,13 +1268,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildContinueButton() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final shadowColor = isDark
+        ? Colors.black.withOpacity(0.4)
+        : Colors.black.withOpacity(0.1);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: shadowColor,
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -1247,8 +1292,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           child: ElevatedButton(
             onPressed: _proceedToPackageDetails,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D7D8F),
-              foregroundColor: Colors.white,
+              backgroundColor: theme.primaryColor,
+              foregroundColor: theme.colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1268,21 +1313,22 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void _showPickupTimeOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final theme = Theme.of(context);
         return Container(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'When to pick up?',
                 style: TextStyle(
-                  color: Color(0xFF0D7D8F),
+                  color: theme.primaryColor,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1304,11 +1350,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildTimeOption(String title, {bool isSelected = false}) {
+    final theme = Theme.of(context);
+
     return ListTile(
       title: Text(
         title,
         style: TextStyle(
-          color: Colors.black87,
+          color: theme.colorScheme.onSurface,
           fontSize: 16,
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
         ),
@@ -1329,6 +1377,62 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         const SnackBar(
           content: Text('Please select both pickup and dropoff locations'),
           backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check if pickup and dropoff locations are the same
+    final pickupLat = _pickupLocation!.lat;
+    final pickupLng = _pickupLocation!.lng;
+    final dropoffLat = _dropoffLocation!.lat;
+    final dropoffLng = _dropoffLocation!.lng;
+
+    // Compare coordinates with a small tolerance for floating point comparison
+    const double tolerance = 0.0001;
+    final isSameLocation =
+        (pickupLat - dropoffLat).abs() < tolerance &&
+        (pickupLng - dropoffLng).abs() < tolerance;
+
+    if (isSameLocation) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              SizedBox(width: 8),
+              Text(
+                'Same Location',
+                style: TextStyle(
+                  color: Color(0xFF0D7D8F),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Pickup and dropoff locations are the same. Please select different locations.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Change Location',
+                style: TextStyle(
+                  color: Color(0xFF0D7D8F),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       );
       return;
@@ -1443,9 +1547,9 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             _userPhone = data['Phone'] ?? '';
             _userNid = data['NID'] ?? '';
 
-            // Check if phone and NID fields should be editable
-            _isPhoneEditable = _userPhone.isEmpty;
-            _isNidEditable = _userNid.isEmpty;
+            // Always allow editing phone and NID (new or existing users)
+            _isPhoneEditable = true;
+            _isNidEditable = true;
 
             if (widget.isSending) {
               // Sending: Auto-fill sender details
@@ -1459,10 +1563,27 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
               recipientNidController.text = _userNid;
             }
           });
+        } else {
+          // User doc doesn't exist: new user
+          setState(() {
+            _isPhoneEditable = true;
+            _isNidEditable = true;
+          });
         }
+      } else {
+        // No user found: new user
+        setState(() {
+          _isPhoneEditable = true;
+          _isNidEditable = true;
+        });
       }
     } catch (e) {
       print('Error loading user data: $e');
+      // On error, allow editing
+      setState(() {
+        _isPhoneEditable = true;
+        _isNidEditable = true;
+      });
     }
   }
 
@@ -1523,7 +1644,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -1546,7 +1667,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         controller: senderNameController,
                         hint: 'Your name',
                         icon: Icons.person_outline,
-                        enabled: false,
+                        enabled: true,
                       ),
                       const SizedBox(height: 12),
                       _buildInputField(
@@ -1586,7 +1707,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         controller: recipientNameController,
                         hint: 'Your name',
                         icon: Icons.person_outline,
-                        enabled: false,
+                        enabled: true,
                       ),
                       const SizedBox(height: 12),
                       _buildInputField(
@@ -1620,7 +1741,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Package description (optional)'),
+                    _buildSectionTitle('Package description'),
                     const SizedBox(height: 12),
                     _buildInputField(
                       controller: packageDescriptionController,
@@ -1641,24 +1762,22 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   }
 
   Widget _buildHeader() {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Color(0xFF0D7D8F),
-              size: 28,
-            ),
+            icon: Icon(Icons.arrow_back, color: theme.primaryColor, size: 28),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
                 'Package details',
                 style: TextStyle(
-                  color: Color(0xFF0D7D8F),
+                  color: theme.primaryColor,
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1672,12 +1791,16 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   }
 
   Widget _buildRouteSummary() {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final dividerColor = theme.dividerColor;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF0D7D8F).withOpacity(0.2)),
+        border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
       ),
       child: Column(
         children: [
@@ -1688,12 +1811,12 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                   Container(
                     width: 12,
                     height: 12,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0D7D8F),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  Container(width: 2, height: 35, color: Colors.grey.shade300),
+                  Container(width: 2, height: 35, color: dividerColor),
                   const Icon(Icons.location_on, color: Colors.orange, size: 20),
                 ],
               ),
@@ -1704,8 +1827,8 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                   children: [
                     Text(
                       widget.pickupLocation.address,
-                      style: const TextStyle(
-                        color: Colors.black87,
+                      style: TextStyle(
+                        color: onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1715,8 +1838,8 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                     const SizedBox(height: 24),
                     Text(
                       widget.dropoffLocation.address,
-                      style: const TextStyle(
-                        color: Colors.black87,
+                      style: TextStyle(
+                        color: onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1728,9 +1851,9 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(
+                icon: Icon(
                   Icons.edit_outlined,
-                  color: Color(0xFF0D7D8F),
+                  color: theme.primaryColor,
                   size: 20,
                 ),
               ),
@@ -1748,7 +1871,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                     ? '...'
                     : _distanceInfo?.distanceText ?? 'N/A',
               ),
-              Container(width: 1, height: 30, color: Colors.grey.shade300),
+              Container(width: 1, height: 30, color: dividerColor),
               _buildInfoChip(
                 icon: Icons.access_time,
                 label: 'Est. Time',
@@ -1756,7 +1879,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                     ? '...'
                     : _distanceInfo?.durationText ?? 'N/A',
               ),
-              Container(width: 1, height: 30, color: Colors.grey.shade300),
+              Container(width: 1, height: 30, color: dividerColor),
               _buildInfoChip(
                 icon: Icons.schedule,
                 label: 'Pickup',
@@ -1774,19 +1897,21 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     required String label,
     required String value,
   }) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ?? onSurface.withOpacity(0.7);
+
     return Column(
       children: [
-        Icon(icon, color: const Color(0xFF0D7D8F), size: 20),
+        Icon(icon, color: theme.primaryColor, size: 20),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-        ),
+        Text(label, style: TextStyle(color: secondaryText, fontSize: 11)),
         const SizedBox(height: 2),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.black87,
+          style: TextStyle(
+            color: onSurface,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -1796,6 +1921,12 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   }
 
   Widget _buildPackageSizeSelection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1816,22 +1947,35 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF0D7D8F) : Colors.white,
+                    color: isSelected
+                        ? theme.primaryColor
+                        : (theme.inputDecorationTheme.fillColor ??
+                              theme.colorScheme.surface),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected
-                          ? const Color(0xFF0D7D8F)
-                          : const Color(0xFF0D7D8F).withOpacity(0.3),
-                      width: isSelected ? 2 : 1,
+                          ? theme.primaryColor
+                          : theme.primaryColor.withOpacity(isDark ? 0.28 : 0.22),
+                      width: isSelected ? 1.5 : 1,
                     ),
+                    boxShadow: [
+                      if (isSelected || !isDark)
+                        BoxShadow(
+                          color: isSelected
+                              ? theme.primaryColor.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.05),
+                          blurRadius: isSelected ? 12 : 8,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
                   ),
                   child: Column(
                     children: [
                       Icon(
                         package['icon'] as IconData,
                         color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF0D7D8F),
+                            ? theme.colorScheme.onPrimary
+                            : theme.primaryColor,
                         size: 28,
                       ),
                       const SizedBox(height: 8),
@@ -1839,8 +1983,8 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         package['size'] as String,
                         style: TextStyle(
                           color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF0D7D8F),
+                              ? theme.colorScheme.onPrimary
+                              : theme.primaryColor,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1850,8 +1994,8 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                         package['description'] as String,
                         style: TextStyle(
                           color: isSelected
-                              ? Colors.white70
-                              : Colors.grey.shade600,
+                              ? theme.colorScheme.onPrimary.withOpacity(0.75)
+                              : secondaryText,
                           fontSize: 10,
                         ),
                         textAlign: TextAlign.center,
@@ -1868,10 +2012,11 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final theme = Theme.of(context);
     return Text(
       title,
-      style: const TextStyle(
-        color: Color(0xFF0D7D8F),
+      style: TextStyle(
+        color: theme.primaryColor,
         fontSize: 16,
         fontWeight: FontWeight.w600,
       ),
@@ -1886,43 +2031,95 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     int maxLines = 1,
     bool enabled = true,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final secondaryText =
+        theme.textTheme.bodySmall?.color ?? onSurface.withOpacity(0.6);
+    final fillColor =
+        theme.inputDecorationTheme.fillColor ?? theme.colorScheme.surface;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF0D7D8F).withOpacity(0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: maxLines > 1
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: maxLines > 1 ? 16 : 0),
-            child: Icon(icon, color: const Color(0xFF0D7D8F), size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              keyboardType: keyboardType,
-              maxLines: maxLines,
-              style: const TextStyle(color: Colors.black87, fontSize: 16),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: hint,
-                hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 16),
-              ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              isDark ? 0.28 : 0.08,
             ),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: TextField(
+        controller: controller,
+        enabled: enabled,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        style: TextStyle(
+          color: onSurface,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          filled: true,
+          fillColor: fillColor,
+          prefixIcon: Padding(
+            padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
+            child: Icon(icon, color: theme.primaryColor, size: 21),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 52,
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: maxLines > 1 ? 18 : 16,
+          ),
+          hintStyle: TextStyle(
+            color: secondaryText,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: theme.primaryColor.withOpacity(isDark ? 0.38 : 0.34),
+              width: 1.1,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: theme.primaryColor.withOpacity(isDark ? 0.38 : 0.34),
+              width: 1.1,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: theme.primaryColor, width: 1.6),
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: theme.primaryColor.withOpacity(isDark ? 0.26 : 0.2),
+              width: 1,
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildPriceAndConfirmButton() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     // Calculation breakdown
     String calculationText = '';
     if (_distanceInfo != null && !_isLoadingDistance) {
@@ -1948,11 +2145,11 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(isDark ? 0.45 : 0.12),
+            blurRadius: isDark ? 10 : 16,
             offset: const Offset(0, -4),
           ),
         ],
@@ -1964,8 +2161,22 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5F7),
+                color: isDark
+                    ? (theme.inputDecorationTheme.fillColor ??
+                          theme.colorScheme.surface)
+                    : theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.primaryColor.withOpacity(isDark ? 0.2 : 0.16),
+                ),
+                boxShadow: [
+                  if (!isDark)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1979,7 +2190,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                           Text(
                             'Estimated Price',
                             style: TextStyle(
-                              color: Colors.grey.shade700,
+                              color: secondaryText,
                               fontSize: 14,
                             ),
                           ),
@@ -1988,8 +2199,8 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                             _isLoadingDistance
                                 ? 'Calculating...'
                                 : '৳ ${_estimatedPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Color(0xFF0D7D8F),
+                            style: TextStyle(
+                              color: theme.primaryColor,
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2002,7 +2213,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D7D8F),
+                          color: theme.primaryColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -2021,7 +2232,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                     Text(
                       calculationText,
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: secondaryText,
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
                       ),
@@ -2032,24 +2243,13 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             ),
             const SizedBox(height: 16),
             // Confirm button
-            SizedBox(
+            AppWidget.primaryActionButton(
+              context: context,
+              label: 'Confirm & Find Driver',
+              loading: _isLoadingDistance,
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoadingDistance ? null : _confirmOrder,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D7D8F),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Confirm & Find Driver',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-              ),
+              icon: Icons.local_shipping_rounded,
+              onPressed: _isLoadingDistance ? null : _confirmOrder,
             ),
           ],
         ),
@@ -2071,16 +2271,65 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
       return;
     }
 
-    // Show success dialog
+    if (packageDescriptionController.text.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.orange, size: 28),
+              const SizedBox(width: 8),
+              Text(
+                'Description Required',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Please describe what\'s inside the package. This helps the driver and recipient know what to expect.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Add Description',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Show Order Summary dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Color(0xFF0D7D8F), size: 28),
-            SizedBox(width: 8),
-            Text('Order Summary'),
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).primaryColor,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            const Text('Order Summary'),
           ],
         ),
         content: Column(
@@ -2107,23 +2356,116 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final orderId = 'QP-${DateTime.now().millisecondsSinceEpoch}';
-              await _placeOrder(
-                orderId: orderId,
-                paymentStatus: 'Unpaid',
-                paymentMethod: 'Pending',
-                paymentProvider: '',
-                paidAmount: 0,
-              );
+              await _handleOrderConfirmation();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D7D8F),
+              backgroundColor: Theme.of(context).primaryColor,
             ),
             child: const Text('Confirm', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleOrderConfirmation() async {
+    try {
+      // Check Firebase authentication
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && user.email != null) {
+        // User is already logged in, check if they have an account in database
+        final helper = SharedpreferenceHelper();
+        String? userId = await helper.getUserId();
+
+        if (userId == null || userId.isEmpty) {
+          // Try to get userId from Firebase UID
+          final byUid = await DatabaseMethods().getUserByFirebaseUid(user.uid);
+          if (byUid.docs.isNotEmpty) {
+            userId = byUid.docs.first.id;
+            await helper.saveUserId(userId);
+          }
+        }
+
+        if (userId != null && userId.isNotEmpty) {
+          // User has account - proceed with order placement
+          final orderId = 'QP-${DateTime.now().millisecondsSinceEpoch}';
+          await _placeOrder(
+            orderId: orderId,
+            paymentStatus: 'Unpaid',
+            paymentMethod: 'Pending',
+            paymentProvider: '',
+            paidAmount: 0,
+          );
+        } else {
+          // User logged in but no account in database - treat as new user
+          await _proceedToSignup();
+        }
+      } else {
+        // User not logged in - proceed to signup
+        await _proceedToSignup();
+      }
+    } catch (e) {
+      print('Error in order confirmation: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _proceedToSignup() async {
+    try {
+      // Create OrderData object
+      final orderData = OrderData(
+        senderName: senderNameController.text.trim(),
+        senderPhone: senderPhoneController.text.trim(),
+        senderNid: senderNidController.text.trim(),
+        recipientName: recipientNameController.text.trim(),
+        recipientPhone: recipientPhoneController.text.trim(),
+        recipientNid: recipientNidController.text.trim(),
+        pickupAddress: widget.pickupLocation.address,
+        dropoffAddress: widget.dropoffLocation.address,
+        pickupLat: widget.pickupLocation.lat,
+        pickupLng: widget.pickupLocation.lng,
+        dropoffLat: widget.dropoffLocation.lat,
+        dropoffLng: widget.dropoffLocation.lng,
+        packageSize: selectedPackageSize,
+        packageDescription: packageDescriptionController.text.trim(),
+        distance: _distanceInfo?.distanceText ?? 'N/A',
+        estimatedTime: _distanceInfo?.durationText ?? 'N/A',
+        estimatedPrice: _estimatedPrice,
+        pickupTime: widget.pickupTime,
+      );
+
+      // Save pending order
+      await PendingOrderService.savePendingOrder(orderData);
+
+      if (mounted) {
+        // Navigate to signup with pre-filled data
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SignUpScreen(pendingOrderData: orderData),
+          ),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      print('Error proceeding to signup: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _placeOrder({
@@ -2199,7 +2541,22 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
           ),
         );
-        Navigator.pop(context);
+
+        // Navigate to Find Driver screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FindDriverScreen(
+              orderId: orderId,
+              pickupLat: widget.pickupLocation.lat.toString(),
+              pickupLng: widget.pickupLocation.lng.toString(),
+              dropoffLat: widget.dropoffLocation.lat.toString(),
+              dropoffLng: widget.dropoffLocation.lng.toString(),
+              pickupAddress: widget.pickupLocation.address,
+              dropoffAddress: widget.dropoffLocation.address,
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -2214,18 +2571,24 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   }
 
   Widget _buildSummaryRow(String label, String value) {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-          ),
+          Text(label, style: TextStyle(color: secondaryText, fontSize: 14)),
           Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -2568,8 +2931,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -2577,10 +2945,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withOpacity(0.45),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -2593,17 +2961,17 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                     children: [
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.arrow_back,
-                          color: Color(0xFF0D7D8F),
+                          color: theme.primaryColor,
                           size: 26,
                         ),
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Select Location',
                           style: TextStyle(
-                            color: Color(0xFF0D7D8F),
+                            color: theme.primaryColor,
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
@@ -2618,26 +2986,40 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
+                      color:
+                          theme.inputDecorationTheme.fillColor ??
+                          theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: const Color(0xFF0D7D8F).withOpacity(0.2),
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.14)
+                            : const Color(0xFF172F35).withOpacity(0.72),
+                        width: 1.2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(
+                            theme.brightness == Brightness.dark ? 0.3 : 0.12,
+                          ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: TextField(
                       controller: _searchController,
                       focusNode: _searchFocusNode,
                       onChanged: _onSearchChanged,
-                      style: const TextStyle(
-                        color: Colors.black87,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
                         fontSize: 15,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Search for a place...',
-                        hintStyle: TextStyle(color: Colors.grey.shade500),
-                        prefixIcon: const Icon(
+                        hintStyle: TextStyle(color: secondaryText),
+                        prefixIcon: Icon(
                           Icons.search,
-                          color: Color(0xFF0D7D8F),
+                          color: theme.primaryColor,
                         ),
                         suffixIcon: _isSearching
                             ? const Padding(
@@ -2647,26 +3029,26 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Color(0xFF0D7D8F),
                                   ),
                                 ),
                               )
                             : _searchController.text.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.grey,
-                                ),
+                                icon: Icon(Icons.close, color: secondaryText),
                                 onPressed: () {
                                   _searchController.clear();
                                   setState(() => _predictions = []);
                                 },
-                              )
+                            )
                             : null,
+                        filled: true,
+                        fillColor: Colors.transparent,
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 12,
+                          vertical: 16,
                         ),
                       ),
                     ),
@@ -2697,11 +3079,16 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   }
 
   Widget _buildMapArea() {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Stack(
       children: [
         // Google Map with error handling
         Container(
-          color: const Color(0xFFF5F5F5),
+          color: theme.scaffoldBackgroundColor,
           child: GoogleMap(
             onMapCreated: (controller) {
               try {
@@ -2749,11 +3136,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withOpacity(0.5),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -2778,8 +3165,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                         : const Icon(Icons.my_location),
                     label: const Text('Current Location'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0D7D8F),
-                      side: const BorderSide(color: Color(0xFF0D7D8F)),
+                      foregroundColor: theme.primaryColor,
+                      side: BorderSide(color: theme.primaryColor),
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -2794,7 +3181,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                     icon: const Icon(Icons.check),
                     label: const Text('Confirm'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D7D8F),
+                      backgroundColor: theme.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(
@@ -2816,11 +3203,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.45),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -2829,10 +3216,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Selected Location',
                   style: TextStyle(
-                    color: Colors.grey,
+                    color: secondaryText,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -2842,8 +3229,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   _selectedAddress.isNotEmpty
                       ? _selectedAddress
                       : 'Default Location: Rajshahi',
-                  style: const TextStyle(
-                    color: Colors.black87,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -2859,8 +3246,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   }
 
   Widget _buildSearchResults() {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Container(
-      color: const Color(0xFFF5F5F5),
+      color: theme.scaffoldBackgroundColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: _predictions.length,
@@ -2869,27 +3261,27 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: theme.dividerColor),
             ),
             child: ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5F7),
+                  color: theme.primaryColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.location_on,
-                  color: Color(0xFF0D7D8F),
+                  color: theme.primaryColor,
                   size: 20,
                 ),
               ),
               title: Text(
                 prediction.mainText,
-                style: const TextStyle(
-                  color: Colors.black87,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -2898,13 +3290,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               ),
               subtitle: Text(
                 prediction.secondaryText,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                style: TextStyle(color: secondaryText, fontSize: 12),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              trailing: const Icon(
+              trailing: Icon(
                 Icons.chevron_right,
-                color: Colors.grey,
+                color: secondaryText,
                 size: 20,
               ),
               onTap: () => _selectPlace(prediction),
@@ -2914,4 +3306,21 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       ),
     );
   }
+}
+
+// Model class for selected locations
+class SelectedLocation {
+  final String address;
+  final String name;
+  final double lat;
+  final double lng;
+  final String? placeId;
+
+  SelectedLocation({
+    required this.address,
+    required this.name,
+    required this.lat,
+    required this.lng,
+    this.placeId,
+  });
 }

@@ -68,7 +68,9 @@ class _ProfilePageState extends State<ProfilePage> {
       if (uid == null || uid.isEmpty) {
         final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
         if (firebaseUid != null && firebaseUid.isNotEmpty) {
-          final byUid = await DatabaseMethods().getUserByFirebaseUid(firebaseUid);
+          final byUid = await DatabaseMethods().getUserByFirebaseUid(
+            firebaseUid,
+          );
           if (byUid.docs.isNotEmpty) {
             uid = byUid.docs.first.id;
             await helper.saveUserId(uid);
@@ -82,7 +84,9 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!doc.exists) {
         final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
         if (firebaseUid != null && firebaseUid.isNotEmpty) {
-          final byUid = await DatabaseMethods().getUserByFirebaseUid(firebaseUid);
+          final byUid = await DatabaseMethods().getUserByFirebaseUid(
+            firebaseUid,
+          );
           if (byUid.docs.isNotEmpty) {
             uid = byUid.docs.first.id;
             await helper.saveUserId(uid);
@@ -95,18 +99,18 @@ class _ProfilePageState extends State<ProfilePage> {
         final data = doc.data()!;
         final resolvedUid = uid;
         if (resolvedUid.isEmpty) return;
-        
+
         final fetchedName = data['Name'] ?? '';
         final fetchedEmail = data['Email'] ?? '';
         final fetchedNid = data['NID'] ?? '';
         final fetchedPhone = data['Phone'] ?? '';
-        
+
         // Cache in SharedPreferences for offline access
         await SharedpreferenceHelper().saveUserName(fetchedName);
         await SharedpreferenceHelper().saveUserEmail(fetchedEmail);
         await SharedpreferenceHelper().saveUserNid(fetchedNid);
         await SharedpreferenceHelper().saveUserPhone(fetchedPhone);
-        
+
         if (mounted) {
           setState(() {
             _userId = resolvedUid;
@@ -140,15 +144,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (name.isEmpty) return 'Name cannot be empty';
     if (nid.isEmpty) return 'NID number cannot be empty';
-    if (!nidRegex.hasMatch(nid)) return 'Enter a valid NID number (10-17 digits)';
+    if (!nidRegex.hasMatch(nid)) {
+      return 'Enter a valid NID number (10-17 digits)';
+    }
     if (phone.isEmpty) return 'Phone number cannot be empty';
     if (!phoneRegex.hasMatch(phone)) {
       return 'Enter a valid phone number';
     }
     return null;
   }
-
-
 
   bool _isProfileVerified() {
     return _nid.isNotEmpty && _phone.isNotEmpty;
@@ -191,15 +195,9 @@ class _ProfilePageState extends State<ProfilePage> {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            _verificationRequirement(
-              'NID Number',
-              _nid.isNotEmpty,
-            ),
+            _verificationRequirement('NID Number', _nid.isNotEmpty),
             const SizedBox(height: 8),
-            _verificationRequirement(
-              'Phone Number',
-              _phone.isNotEmpty,
-            ),
+            _verificationRequirement('Phone Number', _phone.isNotEmpty),
           ],
         ),
         actions: [
@@ -225,7 +223,7 @@ class _ProfilePageState extends State<ProfilePage> {
           label,
           style: TextStyle(
             fontSize: 14,
-            color: isComplete ? Colors.green : Colors.black87,
+            color: isComplete ? Colors.green : AppWidget.textPrimaryColor,
             fontWeight: isComplete ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
@@ -341,9 +339,11 @@ class _ProfilePageState extends State<ProfilePage> {
         return StatefulBuilder(
           builder: (ctx, setLocal) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: AppWidget.surfaceColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
               ),
               padding: EdgeInsets.only(
                 left: 24,
@@ -361,7 +361,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: AppWidget.borderColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -566,9 +566,9 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setLocal) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppWidget.surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
           child: Column(
@@ -580,7 +580,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppWidget.borderColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -601,12 +601,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Notifications',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A2E),
+                      color: AppWidget.textPrimaryColor,
                     ),
                   ),
                 ],
@@ -616,7 +616,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.only(left: 2),
                 child: Text(
                   'Choose what you want to be notified about',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppWidget.textSecondaryColor,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -683,9 +686,9 @@ class _ProfilePageState extends State<ProfilePage> {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (ctx, scroll) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppWidget.surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
@@ -695,7 +698,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppWidget.borderColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -717,12 +720,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Privacy Policy',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1A2E),
+                        color: AppWidget.textPrimaryColor,
                       ),
                     ),
                     const Spacer(),
@@ -730,7 +733,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       'Last updated: Feb 2026',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade400,
+                        color: AppWidget.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -788,9 +791,9 @@ class _ProfilePageState extends State<ProfilePage> {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (ctx, scroll) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppWidget.surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
@@ -800,7 +803,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppWidget.borderColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -822,12 +825,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Help & Support',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1A2E),
+                        color: AppWidget.textPrimaryColor,
                       ),
                     ),
                   ],
@@ -846,7 +849,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade500,
+                          color: AppWidget.textSecondaryColor,
                           letterSpacing: 1.2,
                         ),
                       ),
@@ -889,7 +892,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade500,
+                          color: AppWidget.textSecondaryColor,
                           letterSpacing: 1.2,
                         ),
                       ),
@@ -924,7 +927,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  //  date formatter 
+  //  date formatter
 
   String _formatDate(String iso) {
     try {
@@ -949,7 +952,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  //  helpers 
+  //  helpers
 
   void _snack(String msg, {bool error = false}) {
     if (!mounted) return;
@@ -987,7 +990,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  //  build 
+  //  build
 
   @override
   Widget build(BuildContext context) {
@@ -997,7 +1000,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : Column(
               children: [
-                //  Header Section 
+                //  Header Section
                 SafeArea(
                   bottom: false,
                   child: Padding(
@@ -1092,7 +1095,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                               ? Image.network(
                                                   _photoUrl!,
                                                   fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) =>
+                                                  errorBuilder: (_, _, _) =>
                                                       _defaultAvatar(),
                                                 )
                                               : _defaultAvatar()),
@@ -1158,7 +1161,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                               ),
-
                             ],
                           ),
                         ),
@@ -1180,7 +1182,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                   icon: Icons.verified_user_outlined,
                                   label: 'Verified Profile',
                                 )
-
                               else
                                 GestureDetector(
                                   onTap: () {
@@ -1231,9 +1232,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: Container(
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.only(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(30),
                         topRight: Radius.circular(30),
                       ),
@@ -1243,7 +1244,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          //  Personal Info Section 
+                          //  Personal Info Section
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1360,7 +1361,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               children: [
                                 _settingsTile(
                                   icon: Icons.lock_outline_rounded,
-                                  iconBg: const Color(0xFFE8F5F7),
+                                  iconBg: _primary.withOpacity(0.14),
                                   iconColor: _primary,
                                   title: 'Change Password',
                                   subtitle: 'Update your login password',
@@ -1369,7 +1370,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _divider(),
                                 _settingsTile(
                                   icon: Icons.notifications_outlined,
-                                  iconBg: const Color(0xFFFFF3E0),
+                                  iconBg: const Color(
+                                    0xFFE65100,
+                                  ).withOpacity(0.14),
                                   iconColor: const Color(0xFFE65100),
                                   title: 'Notifications',
                                   subtitle: 'Manage your alert preferences',
@@ -1378,7 +1381,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _divider(),
                                 _settingsTile(
                                   icon: Icons.privacy_tip_outlined,
-                                  iconBg: const Color(0xFFE3F2FD),
+                                  iconBg: const Color(
+                                    0xFF1565C0,
+                                  ).withOpacity(0.14),
                                   iconColor: const Color(0xFF1565C0),
                                   title: 'Privacy Policy',
                                   subtitle: 'Read our privacy policy',
@@ -1387,7 +1392,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _divider(),
                                 _settingsTile(
                                   icon: Icons.help_outline_rounded,
-                                  iconBg: const Color(0xFFF3E5F5),
+                                  iconBg: const Color(
+                                    0xFF9C27B0,
+                                  ).withOpacity(0.14),
                                   iconColor: const Color(0xFF6A1B9A),
                                   title: 'Help & Support',
                                   subtitle: 'Get help or report an issue',
@@ -1399,17 +1406,17 @@ class _ProfilePageState extends State<ProfilePage> {
 
                           const SizedBox(height: 28),
 
-                          //  Logout Button 
+                          //  Logout Button
                           GestureDetector(
                             onTap: _confirmLogout,
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(vertical: 15),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFF5F5),
+                                color: Colors.red.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: const Color(0xFFFFCDD2),
+                                  color: Colors.red.withOpacity(0.3),
                                 ),
                               ),
                               child: const Row(
@@ -1466,15 +1473,15 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppWidget.surfaceAltColor,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: AppWidget.borderColor),
             ),
             child: Center(
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: AppWidget.textSecondaryColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
                   letterSpacing: 0.3,
@@ -1501,7 +1508,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
-              color: _savingInfo ? Colors.grey.shade300 : null,
+              color: _savingInfo ? AppWidget.borderColor : null,
               borderRadius: BorderRadius.circular(14),
               boxShadow: _savingInfo
                   ? []

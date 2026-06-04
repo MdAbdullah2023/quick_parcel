@@ -2,23 +2,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:quick_parcel/coustomer/bottomnav.dart';
+import 'package:quick_parcel/driver/driver_bottomnav.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:quick_parcel/coustomer/forgot_password.dart';
+import 'package:quick_parcel/driver/driver_signup.dart';
 import 'package:quick_parcel/services/CustomTextField.dart';
-import 'package:quick_parcel/services/widget_support.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/database.dart';
-import 'package:quick_parcel/coustomer/signup.dart';
+import 'package:quick_parcel/services/widget_support.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class DriverLoginScreen extends StatefulWidget {
+  const DriverLoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<DriverLoginScreen> createState() => _DriverLoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _DriverLoginScreenState extends State<DriverLoginScreen> {
+  static const Color _primary = Color(0xFFF57C00); // Orange for Driver
+
   final _formKey = GlobalKey<FormState>();
 
   final _emailController = TextEditingController();
@@ -52,63 +53,51 @@ class _LoginScreenState extends State<LoginScreen> {
       Map<String, dynamic>? resolvedUserData;
 
       if (firebaseUid.isNotEmpty) {
-        final byUid = await DatabaseMethods().getUserByFirebaseUid(firebaseUid);
+        final byUid = await DatabaseMethods().getDriverByFirebaseUid(
+          firebaseUid,
+        );
         if (byUid.docs.isNotEmpty) {
           resolvedUserDocId = byUid.docs.first.id;
           resolvedUserData = byUid.docs.first.data();
         }
       }
 
-      if (resolvedUserDocId == null && email.isNotEmpty) {
-        final byEmail = await DatabaseMethods().getUserByEmail(email);
-        if (byEmail.docs.isNotEmpty) {
-          resolvedUserDocId = byEmail.docs.first.id;
-          resolvedUserData = byEmail.docs.first.data();
+      if (resolvedUserDocId != null && resolvedUserData != null) {
+        await helper.saveUserId(resolvedUserDocId);
+        await helper.saveUserName(resolvedUserData['Name'] ?? 'Driver');
+        await helper.saveUserEmail(email);
+        await helper.saveUserType('Driver');
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const DriverBottomNav()),
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.red,
+              content: Text('Driver profile not found. Please sign up.'),
+            ),
+          );
         }
       }
-
-      await helper.saveUserId(resolvedUserDocId ?? firebaseUid);
-      await helper.saveUserEmail(resolvedUserData?['Email'] ?? email);
-      await helper.saveUserName(resolvedUserData?['Name'] ?? '');
-      await helper.saveUserType('Customer');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.green,
-          content: Text('Logged in successfully'),
-        ),
-      );
-
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const BottomNav()));
     } on FirebaseAuthException catch (e) {
-      String msg = 'Login failed';
-      switch (e.code) {
-        case 'user-not-found':
-          msg = 'No user found with this email.';
-          break;
-        case 'wrong-password':
-          msg = 'Incorrect password. Please try again.';
-          break;
-        case 'invalid-email':
-          msg = 'Invalid email address.';
-          break;
-        case 'user-disabled':
-          msg = 'This user has been disabled.';
-          break;
-        default:
-          msg = e.message ?? msg;
+      if (mounted) {
+        String errorMsg = 'Login failed';
+        if (e.code == 'user-not-found') {
+          errorMsg = 'No driver found with this email';
+        } else if (e.code == 'wrong-password') {
+          errorMsg = 'Incorrect password';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: Colors.red, content: Text(errorMsg)),
+        );
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(backgroundColor: Colors.red, content: Text(msg)));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red, content: Text(e.toString())),
-      );
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -116,51 +105,72 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       setState(() => _loading = true);
 
-      final googleUser = await GoogleSignIn().signIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
       if (googleUser == null) {
         setState(() => _loading = false);
         return;
       }
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final cred = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      final cred = await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final userCred = await FirebaseAuth.instance.signInWithCredential(cred);
 
       final helper = SharedpreferenceHelper();
-      await helper.saveUserId(cred.user?.uid ?? '');
-      await helper.saveUserEmail(cred.user?.email ?? '');
-      await helper.saveUserName(cred.user?.displayName ?? '');
-      await helper.saveUserType('Customer');
+      final firebaseUid = userCred.user?.uid ?? '';
 
-      await DatabaseMethods().addUserDetail({
-        'Id': cred.user?.uid,
-        'FirebaseUid': cred.user?.uid,
-        'Name': cred.user?.displayName,
-        'Email': cred.user?.email,
-        'Phone': cred.user?.phoneNumber,
-        'PhotoUrl': cred.user?.photoURL,
-        'Provider': 'google',
-        'UpdatedAt': DateTime.now().toIso8601String(),
-      }, cred.user?.uid ?? '');
+      final byUid = await DatabaseMethods().getDriverByFirebaseUid(firebaseUid);
 
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const BottomNav()));
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red,
-          content: Text(e.message ?? 'Google sign-in failed'),
-        ),
+      if (byUid.docs.isEmpty) {
+        // Create new driver profile
+        final String customId = userCred.user?.uid ?? '';
+        final driverInfoMap = {
+          'Id': customId,
+          'FirebaseUid': firebaseUid,
+          'Name': userCred.user?.displayName ?? 'Driver',
+          'Email': userCred.user?.email ?? '',
+          'UserType': 'Driver',
+          'CreatedAt': DateTime.now().toIso8601String(),
+          'IsVerified': false,
+          'Rating': 5.0,
+          'TotalDeliveries': 0,
+        };
+
+        await DatabaseMethods().addDriverDetail(driverInfoMap, customId);
+        await helper.saveUserId(customId);
+      } else {
+        await helper.saveUserId(byUid.docs.first.id);
+      }
+
+      await helper.saveUserName(userCred.user?.displayName ?? 'Driver');
+      await helper.saveUserEmail(userCred.user?.email ?? '');
+      await helper.saveUserType('Driver');
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const DriverBottomNav()),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red, content: Text(e.toString())),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Google login failed: ${e.toString()}'),
+          ),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -169,10 +179,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.primaryColor,
+      backgroundColor: _primary,
       body: Column(
         children: [
-          SizedBox(height: 30),
+          const SizedBox(height: 30),
           SizedBox(
             height: 200,
             child: Image.asset(
@@ -189,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Login',
+                  'Driver Login',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 48,
@@ -205,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 Text(
-                  'Your Parcel are waiting',
+                  'Start your delivery journey',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 16,
@@ -240,6 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icons.email_outlined,
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        primaryColor: const Color(0xFFF57C00),
                         validator: (v) {
                           final value = v?.trim() ?? '';
                           if (value.isEmpty) return 'Enter email';
@@ -258,6 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icons.lock_outline,
                         controller: _passwordController,
                         isPassword: true,
+                        primaryColor: const Color(0xFFF57C00),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter password' : null,
                       ),
@@ -266,15 +278,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPassword(),
-                              ),
-                            );
+                            // Navigate to forgot password
                           },
                           child: Text(
                             'Forgot password?',
-                            style: AppWidget.GreenTextfeildStyle(14),
+                            style: TextStyle(
+                              color: const Color(0xFFF57C00),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),
@@ -282,6 +294,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       AppWidget.primaryActionButton(
                         context: context,
                         label: 'Log in',
+                        color: _primary,
                         loading: _loading,
                         onPressed: _loading ? null : _signInWithEmail,
                       ),
@@ -295,12 +308,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               thickness: 1,
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               'Or Log in with',
                               style: TextStyle(
-                                color: theme.primaryColor,
+                                color: Color(0xFFF57C00),
                                 fontSize: 15,
                               ),
                             ),
@@ -320,15 +333,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: _loading ? null : _signInWithGoogle,
-                              icon: FaIcon(
+                              icon: const FaIcon(
                                 FontAwesomeIcons.google,
                                 size: 20,
-                                color: theme.primaryColor,
+                                color: Color(0xFFF57C00),
                               ),
-                              label: Text(
+                              label: const Text(
                                 'Google',
                                 style: TextStyle(
-                                  color: theme.primaryColor,
+                                  color: Color(0xFFF57C00),
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -338,39 +351,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   vertical: 12,
                                 ),
                                 side: BorderSide(
-                                  color: theme.primaryColor.withOpacity(0.4),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                //  fb login
-                              },
-                              icon: FaIcon(
-                                FontAwesomeIcons.facebook,
-                                size: 20,
-                                color: theme.primaryColor,
-                              ),
-                              label: Text(
-                                'Facebook',
-                                style: TextStyle(
-                                  color: theme.primaryColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                side: BorderSide(
-                                  color: theme.primaryColor.withOpacity(0.4),
+                                  color: const Color(
+                                    0xFFF57C00,
+                                  ).withOpacity(0.3),
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -381,24 +364,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 25),
+
+                      // Sign Up Link
                       Center(
                         child: RichText(
                           text: TextSpan(
-                            text: "Don't you have an account? ",
+                            text: "Don't have an account? ",
                             style: TextStyle(
                               color: theme.textTheme.bodyMedium?.color,
-                              fontSize: 16,
+                              fontSize: 15,
                             ),
                             children: [
                               TextSpan(
-                                text: 'Sign up',
-                                style: AppWidget.GreenTextfeildStyle(16.0),
+                                text: 'Sign Up',
+                                style: const TextStyle(
+                                  color: Color(0xFFF57C00),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
-                                    Navigator.of(context).push(
+                                    Navigator.of(context).pushReplacement(
                                       MaterialPageRoute(
-                                        builder: (_) => const SignUpScreen(),
+                                        builder: (context) =>
+                                            const DriverSignUpScreen(),
                                       ),
                                     );
                                   },

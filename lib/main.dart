@@ -4,6 +4,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:quick_parcel/introPage.dart';
 import 'package:quick_parcel/slaph_screen.dart';
+import 'package:quick_parcel/coustomer/login.dart';
+import 'package:quick_parcel/coustomer/signup.dart';
+import 'package:quick_parcel/services/app_theme.dart';
+
+// Driver app imports (commented out)
+// import 'package:quick_parcel/driver/driver_login.dart';
+// import 'package:quick_parcel/driver/driver_signup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,22 +34,21 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-      ),
+      title: 'Quick Parcel',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       home: SplashScreen(),
-      routes: {'/intro': (context) => const Intropage()},
+      routes: {
+        '/intro': (context) => const Intropage(),
+        // Customer app routes
+        '/customer-login': (context) => const LoginScreen(),
+        '/customer-signup': (context) => const SignUpScreen(),
+
+        // Driver app routes (commented out)
+        // '/driver-login': (context) => const DriverLoginScreen(),
+        // '/driver-signup': (context) => const DriverSignUpScreen(),
+      },
     );
   }
 }

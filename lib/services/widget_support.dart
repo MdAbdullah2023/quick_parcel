@@ -1,9 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:quick_parcel/services/app_theme.dart';
+
+bool _isDarkMode() {
+  return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+      Brightness.dark;
+}
+
+Color _primaryColor() {
+  return _isDarkMode() ? AppTheme.darkPrimary : AppTheme.lightPrimary;
+}
+
+Color _surfaceColor() {
+  return _isDarkMode() ? AppTheme.darkSurface : AppTheme.lightSurface;
+}
+
+Color _surfaceAltColor() {
+  return _isDarkMode() ? AppTheme.darkSurfaceAlt : AppTheme.lightSurfaceAlt;
+}
+
+Color _textPrimaryColor() {
+  return _isDarkMode() ? AppTheme.darkText : AppTheme.lightText;
+}
+
+Color _textSecondaryColor() {
+  return _isDarkMode()
+      ? AppTheme.darkTextSecondary
+      : AppTheme.lightTextSecondary;
+}
+
+Color _borderColor() {
+  return _isDarkMode() ? AppTheme.darkBorder : AppTheme.lightBorder;
+}
+
+Color _shadowColor() {
+  return _isDarkMode()
+      ? Colors.black.withOpacity(0.4)
+      : Colors.black.withOpacity(0.1);
+}
+
+Color _shadowSoftColor() {
+  return _isDarkMode()
+      ? Colors.black.withOpacity(0.2)
+      : Colors.black.withOpacity(0.02);
+}
+
+Color _inputFillColor() {
+  return _isDarkMode() ? AppTheme.darkInput : AppTheme.lightInput;
+}
 
 class AppWidget {
+  static Color get surfaceColor => _surfaceColor();
+  static Color get surfaceAltColor => _surfaceAltColor();
+  static Color get primaryColor => _primaryColor();
+  static Color get textPrimaryColor => _textPrimaryColor();
+  static Color get textSecondaryColor => _textSecondaryColor();
+  static Color get borderColor => _borderColor();
+  static Color get shadowColor => _shadowColor();
+  static Color get inputFillColor => _inputFillColor();
+
   static TextStyle GreenTextfeildStyle(double textsize) {
     return TextStyle(
-      color: Color(0xFF0D7A8A),
+      color: _primaryColor(),
       fontSize: textsize,
       fontWeight: FontWeight.w400,
     );
@@ -11,7 +68,7 @@ class AppWidget {
 
   static TextStyle BoldGreenTextfeildStyle(double textsize) {
     return TextStyle(
-      color: Color(0xFF0D7A8A),
+      color: _primaryColor(),
       fontSize: textsize,
       fontWeight: FontWeight.bold,
     );
@@ -25,6 +82,112 @@ class AppWidget {
     );
   }
 
+  static TextStyle boldTextFieldStyle(double textsize) {
+    return TextStyle(
+      color: _textPrimaryColor(),
+      fontSize: textsize,
+      fontWeight: FontWeight.bold,
+    );
+  }
+
+  static TextStyle LightTextFieldStyle(double textsize) {
+    return TextStyle(
+      color: _textSecondaryColor(),
+      fontSize: textsize,
+      fontWeight: FontWeight.w400,
+    );
+  }
+
+  static Widget primaryActionButton({
+    required BuildContext context,
+    required String label,
+    required VoidCallback? onPressed,
+    bool loading = false,
+    Color? color,
+    IconData icon = Icons.arrow_forward_rounded,
+    double? width,
+  }) {
+    final theme = Theme.of(context);
+    final primary = color ?? theme.primaryColor;
+    final isDisabled = onPressed == null || loading;
+    final effectivePrimary = isDisabled
+        ? primary.withOpacity(0.55)
+        : primary;
+
+    return Center(
+      child: Container(
+        width: width ?? MediaQuery.of(context).size.width / 1.55,
+        height: 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              effectivePrimary.withOpacity(0.94),
+              effectivePrimary,
+              effectivePrimary.withOpacity(0.78),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: effectivePrimary.withOpacity(
+                theme.brightness == Brightness.dark ? 0.34 : 0.28,
+              ),
+              blurRadius: 18,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isDisabled ? null : onPressed,
+            borderRadius: BorderRadius.circular(16),
+            child: Center(
+              child: loading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.18),
+                            ),
+                          ),
+                          child: Icon(icon, color: Colors.white, size: 17),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // trust indicators
   static Widget buildTrustBadge(IconData icon, String label) {
     return Column(
@@ -32,10 +195,16 @@ class AppWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: _isDarkMode()
+                ? AppTheme.darkSurface.withOpacity(0.6)
+                : Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: Colors.white, size: 20),
+          child: Icon(
+            icon,
+            color: _isDarkMode() ? AppTheme.darkText : Colors.white,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 5),
         Text(
@@ -50,8 +219,6 @@ class AppWidget {
     );
   }
 
-
-
   static Widget buildPremiumOfferItem({
     required IconData icon,
     required String title,
@@ -63,12 +230,12 @@ class AppWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surfaceColor(),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200, width: 2),
+        border: Border.all(color: _borderColor(), width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: _shadowColor(),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -89,7 +256,7 @@ class AppWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: Colors.white, size: 28),
+            child: Icon(icon, color: AppTheme.darkText, size: 28),
           ),
           const SizedBox(width: 15),
           Expanded(
@@ -132,16 +299,16 @@ class AppWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: _textPrimaryColor(),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: _textSecondaryColor()),
                 ),
               ],
             ),
@@ -158,35 +325,154 @@ class AppWidget {
     required String hint,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    return Row(
+    return Container(
+      constraints: const BoxConstraints(minHeight: 56),
+      decoration: BoxDecoration(
+        color: _inputFillColor(),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _isDarkMode()
+              ? Colors.white.withOpacity(0.14)
+              : const Color(0xFF172F35).withOpacity(0.72),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _isDarkMode()
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        style: TextStyle(
+          fontSize: 15,
+          color: _textPrimaryColor(),
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          filled: true,
+          fillColor: Colors.transparent,
+          hintStyle: TextStyle(
+            color: _textSecondaryColor(),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: _primaryColor().withOpacity(_isDarkMode() ? 0.8 : 0.65),
+            size: 22,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 48,
+          ),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 17,
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget FormTextField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    String? label,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    final field = Container(
+      constraints: const BoxConstraints(minHeight: 56),
+      decoration: BoxDecoration(
+        color: _inputFillColor(),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _isDarkMode()
+              ? Colors.white.withOpacity(0.14)
+              : const Color(0xFF172F35).withOpacity(0.72),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _isDarkMode()
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        onSubmitted: onSubmitted,
+        style: TextStyle(
+          fontSize: 15,
+          color: _textPrimaryColor(),
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          filled: true,
+          fillColor: Colors.transparent,
+          hintStyle: TextStyle(
+            color: _textSecondaryColor(),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: _primaryColor().withOpacity(_isDarkMode() ? 0.8 : 0.65),
+            size: 22,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 48,
+          ),
+          suffixIcon: suffixIcon,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 17,
+          ),
+        ),
+      ),
+    );
+
+    if (label == null || label.trim().isEmpty) {
+      return field;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D7D8F).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: const Color(0xFF0D7D8F), size: 24),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            style: const TextStyle(fontSize: 16, color: Colors.black87),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-              border: InputBorder.none,
-              enabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey, width: 1),
-              ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF0D7D8F), width: 2),
-              ),
-            ),
+        Text(
+          label,
+          style: TextStyle(
+            color: _primaryColor(),
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.1,
           ),
         ),
+        const SizedBox(height: 8),
+        field,
       ],
     );
   }
@@ -201,10 +487,10 @@ class AppWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFE8F5F7),
+          color: _surfaceAltColor(),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFF0D7D8F).withOpacity(0.2),
+            color: _primaryColor().withOpacity(0.22),
             width: 2,
           ),
         ),
@@ -215,8 +501,8 @@ class AppWidget {
             const SizedBox(height: 16),
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF0D7D8F),
+              style: TextStyle(
+                color: _primaryColor(),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -231,12 +517,12 @@ class AppWidget {
 //  Profile Page Widgets
 
 class ProfilePageWidgets {
-  static const Color _primary = Color(0xFF0D7D8F);
+  static Color get _primary => _primaryColor();
 
   // Default Avatar Widget
   static Widget defaultAvatar() => Container(
-    color: const Color(0xFFE8F5F7),
-    child: const Icon(Icons.person_rounded, size: 52, color: _primary),
+    color: _surfaceAltColor(),
+    child: Icon(Icons.person_rounded, size: 52, color: _primary),
   );
 
   // Stat Chip Widget
@@ -244,19 +530,29 @@ class ProfilePageWidgets {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: _isDarkMode()
+              ? AppTheme.darkSurface.withOpacity(0.6)
+              : Colors.white.withOpacity(0.2),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.35)),
+          border: Border.all(
+            color: _isDarkMode()
+                ? AppTheme.darkBorder
+                : Colors.white.withOpacity(0.35),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 13),
+            Icon(
+              icon,
+              color: _isDarkMode() ? AppTheme.darkText : Colors.white,
+              size: 13,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: _isDarkMode() ? AppTheme.darkText : Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.4,
@@ -282,10 +578,10 @@ class ProfilePageWidgets {
         const SizedBox(width: 12),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1A1A2E),
+            color: _textPrimaryColor(),
             letterSpacing: 0.3,
           ),
         ),
@@ -298,16 +594,16 @@ class ProfilePageWidgets {
     width: double.infinity,
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: _surfaceColor(),
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
+          color: _shadowColor(),
           blurRadius: 16,
           offset: const Offset(0, 4),
         ),
         BoxShadow(
-          color: Colors.black.withOpacity(0.02),
+          color: _shadowSoftColor(),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -324,9 +620,9 @@ class ProfilePageWidgets {
   }) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
     decoration: BoxDecoration(
-      color: const Color(0xFFFAFBFC),
+      color: _surfaceAltColor(),
       borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: Colors.grey.shade100, width: 1.2),
+      border: Border.all(color: _borderColor(), width: 1.2),
     ),
     child: Row(
       children: [
@@ -346,7 +642,7 @@ class ProfilePageWidgets {
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: _textSecondaryColor(),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
@@ -355,8 +651,8 @@ class ProfilePageWidgets {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A2E),
+                style: TextStyle(
+                  color: _textPrimaryColor(),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.2,
@@ -378,9 +674,9 @@ class ProfilePageWidgets {
   }) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
     decoration: BoxDecoration(
-      color: const Color(0xFFFAFBFC),
+      color: _surfaceAltColor(),
       borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: Colors.grey.shade100, width: 1.2),
+      border: Border.all(color: _borderColor(), width: 1.2),
     ),
     child: Row(
       children: [
@@ -400,7 +696,7 @@ class ProfilePageWidgets {
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: _textSecondaryColor(),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
@@ -411,8 +707,8 @@ class ProfilePageWidgets {
                 value,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A2E),
+                style: TextStyle(
+                  color: _textPrimaryColor(),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.2,
@@ -489,10 +785,10 @@ class ProfilePageWidgets {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
-                    color: Color(0xFF1A1A2E),
+                    color: _textPrimaryColor(),
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -500,7 +796,7 @@ class ProfilePageWidgets {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.grey.shade500,
+                    color: _textSecondaryColor(),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.1,
@@ -512,12 +808,12 @@ class ProfilePageWidgets {
           Container(
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: _surfaceAltColor(),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.grey.shade500,
+              color: _textSecondaryColor(),
               size: 13,
             ),
           ),
@@ -528,7 +824,7 @@ class ProfilePageWidgets {
 
   // Divider Widget
   static Widget divider() =>
-      Divider(color: Colors.grey.shade100, height: 1, thickness: 1);
+      Divider(color: _borderColor(), height: 1, thickness: 1);
 
   // Password Field Widget
   static Widget pwField({
@@ -539,27 +835,27 @@ class ProfilePageWidgets {
   }) => TextField(
     controller: ctrl,
     obscureText: !show,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w500,
-      color: Color(0xFF1A1A2E),
+      color: _textPrimaryColor(),
     ),
     decoration: InputDecoration(
       labelText: label,
       labelStyle: TextStyle(
-        color: Colors.grey.shade500,
+        color: _textSecondaryColor(),
         fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
       filled: true,
-      fillColor: const Color(0xFFF0FAFB),
+      fillColor: _inputFillColor(),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _primary, width: 1.5),
+        borderSide: BorderSide(color: _primary, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -599,16 +895,16 @@ class ProfilePageWidgets {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: _textPrimaryColor(),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 12, color: _textSecondaryColor()),
               ),
             ],
           ),
@@ -630,10 +926,10 @@ class ProfilePageWidgets {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1A1A2E),
+            color: _textPrimaryColor(),
             letterSpacing: 0.2,
           ),
         ),
@@ -643,7 +939,7 @@ class ProfilePageWidgets {
           style: TextStyle(
             fontSize: 13,
             height: 1.65,
-            color: Colors.grey.shade600,
+            color: _textSecondaryColor(),
           ),
         ),
       ],
@@ -660,21 +956,21 @@ class ProfilePageWidgets {
     child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFB),
+        color: _surfaceAltColor(),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _borderColor()),
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         iconColor: _primary,
-        collapsedIconColor: Colors.grey.shade500,
+        collapsedIconColor: _textSecondaryColor(),
         title: Text(
           question,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            color: _textPrimaryColor(),
           ),
         ),
         children: [
@@ -683,7 +979,7 @@ class ProfilePageWidgets {
             style: TextStyle(
               fontSize: 13,
               height: 1.6,
-              color: Colors.grey.shade600,
+              color: _textSecondaryColor(),
             ),
           ),
         ],
@@ -700,9 +996,9 @@ class ProfilePageWidgets {
   }) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     decoration: BoxDecoration(
-      color: const Color(0xFFF8FAFB),
+      color: _surfaceAltColor(),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Colors.grey.shade200),
+      border: Border.all(color: _borderColor()),
     ),
     child: Row(
       children: [
@@ -716,17 +1012,17 @@ class ProfilePageWidgets {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade400,
+                color: _textSecondaryColor(),
                 letterSpacing: 0.3,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: _textPrimaryColor(),
               ),
             ),
           ],
@@ -744,30 +1040,30 @@ class ProfilePageWidgets {
   }) => TextField(
     controller: ctrl,
     keyboardType: keyboardType,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w600,
-      color: Color(0xFF1A1A2E),
+      color: _textPrimaryColor(),
       letterSpacing: 0.1,
     ),
     decoration: InputDecoration(
       labelText: label,
       labelStyle: TextStyle(
-        color: Colors.grey.shade500,
+        color: _textSecondaryColor(),
         fontSize: 13,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.2,
       ),
       prefixIcon: Icon(icon, color: _primary, size: 20),
       filled: true,
-      fillColor: const Color(0xFFF0FAFB),
+      fillColor: _inputFillColor(),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _primary, width: 1.5),
+        borderSide: BorderSide(color: _primary, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -781,7 +1077,7 @@ class ProfilePageWidgets {
 // My Packages Page Widgets
 
 class MyPackagesWidgets {
-  static const Color _primary = Color(0xFF0D7D8F);
+  static Color get _primary => _primaryColor();
 
   // Status Badge
   static Widget statusBadge({
@@ -825,7 +1121,7 @@ class MyPackagesWidgets {
                   ),
                 ),
               ),
-              Container(width: 2, height: 28, color: Colors.grey.shade200),
+              Container(width: 2, height: 28, color: _borderColor()),
               Container(
                 width: 10,
                 height: 10,
@@ -855,10 +1151,10 @@ class MyPackagesWidgets {
                   pickup.isNotEmpty ? pickup : 'Pickup location',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
+                    color: _textPrimaryColor(),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -886,7 +1182,7 @@ class MyPackagesWidgets {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FAFB),
+              color: _inputFillColor(),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: _primary.withOpacity(0.12)),
             ),
@@ -902,7 +1198,7 @@ class MyPackagesWidgets {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: _textSecondaryColor(),
                     ),
                   ),
                 ),
@@ -933,7 +1229,7 @@ class MyPackagesWidgets {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
-                  color: Colors.grey.shade500,
+                  color: _textSecondaryColor(),
                   fontWeight: FontWeight.w500,
                   height: 1.5,
                 ),
@@ -989,12 +1285,10 @@ class MyPackagesWidgets {
             height: 180,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: _surfaceAltColor(),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
-              child: CircularProgressIndicator(color: _primary),
-            ),
+            child: Center(child: CircularProgressIndicator(color: _primary)),
           );
         },
       ),
@@ -1005,7 +1299,7 @@ class MyPackagesWidgets {
 // Manage Parcels Widgets
 
 class SendPackageWidgets {
-  static const Color _primary = Color(0xFF0D7D8F);
+  static Color get _primary => _primaryColor();
 
   // Bottom Navigation Bar
   static Widget buildBottomNavBar({
@@ -1013,10 +1307,10 @@ class SendPackageWidgets {
     required Function(int) onTap,
   }) => Container(
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: _surfaceColor(),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: _shadowColor(),
           blurRadius: 20,
           offset: const Offset(0, -5),
         ),
@@ -1035,9 +1329,9 @@ class SendPackageWidgets {
         currentIndex: selectedIndex,
         onTap: onTap,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
+        backgroundColor: _surfaceColor(),
         selectedItemColor: _primary,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: _textSecondaryColor(),
         showSelectedLabels: false,
         showUnselectedLabels: false,
         elevation: 0,
@@ -1052,7 +1346,7 @@ class SendPackageWidgets {
               'images/send_package.png',
               height: 34,
               width: 34,
-              color: Colors.grey,
+              color: _textSecondaryColor(),
             ),
             activeIcon: Image.asset(
               'images/send_package.png',
@@ -1067,7 +1361,7 @@ class SendPackageWidgets {
               'images/live_traking.png',
               height: 34,
               width: 34,
-              color: Colors.grey,
+              color: _textSecondaryColor(),
             ),
             activeIcon: Image.asset(
               'images/live_traking.png',
@@ -1082,7 +1376,7 @@ class SendPackageWidgets {
               'images/my_package.png',
               height: 34,
               width: 34,
-              color: Colors.grey,
+              color: _textSecondaryColor(),
             ),
             activeIcon: Image.asset(
               'images/my_package.png',
@@ -1102,74 +1396,78 @@ class SendPackageWidgets {
     required String imagePath,
     required String title,
     required VoidCallback onTap,
-  }) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _primary.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Container(
-              height: 100,
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [const Color(0xFFE8F5F7), const Color(0xFFD0EAEF)],
-                ),
+  }) {
+    final headerGradient = _isDarkMode()
+        ? [AppTheme.darkSurface, AppTheme.darkSurface.withOpacity(0.85)]
+        : [const Color(0xFFE8F5F7), const Color(0xFFD0EAEF)];
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _surfaceColor(),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _primary.withOpacity(0.3), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Icon(
-                      title.contains('Send')
-                          ? Icons.upload_outlined
-                          : Icons.download_outlined,
-                      size: 36,
-                      color: _primary,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          // Title with arrow
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF0D7D8F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+              child: Container(
+                height: 100,
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: headerGradient,
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward,
-                  color: Color(0xFF0D7D8F),
-                  size: 20,
+                child: Image.asset(
+                  imagePath,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(
+                        title.contains('Send')
+                            ? Icons.upload_outlined
+                            : Icons.download_outlined,
+                        size: 36,
+                        color: _primary,
+                      ),
+                    );
+                  },
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            // Title with arrow
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: _primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward, color: _primary, size: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   // Popular Ways Section
   static Widget buildPopularWaysSection({
@@ -1178,7 +1476,7 @@ class SendPackageWidgets {
   }) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xFFE8F5F7),
+      color: _surfaceAltColor(),
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: _primary.withOpacity(0.2), width: 1),
     ),
@@ -1187,8 +1485,8 @@ class SendPackageWidgets {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Color(0xFF0D7D8F),
+          style: TextStyle(
+            color: _primary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -1221,7 +1519,7 @@ class SendPackageWidgets {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            style: TextStyle(color: _textSecondaryColor(), fontSize: 13),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -1259,7 +1557,7 @@ class SendPackageWidgets {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _surfaceColor(),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: _primary.withOpacity(0.3), width: 1),
         ),
@@ -1270,7 +1568,7 @@ class SendPackageWidgets {
             Text(
               'Deliver to?',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: _textSecondaryColor(),
                 fontSize: 18,
                 fontWeight: FontWeight.w400,
               ),

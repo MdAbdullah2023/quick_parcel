@@ -204,10 +204,15 @@ class _BillingPageState extends State<BillingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F6FB),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D7D8F),
+        backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Billing & Payment'),
@@ -220,14 +225,24 @@ class _BillingPageState extends State<BillingPage> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0D7D8F), Color(0xFF18A6BD)],
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.primaryColor,
+                      theme.primaryColor.withOpacity(0.7),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.primaryColor.withOpacity(0.25),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,18 +269,50 @@ class _BillingPageState extends State<BillingPage> {
                 ),
               ),
               if (_isUnpaidListMode) ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Unpaid Bills',
-                  style: TextStyle(
-                    color: Color(0xFF12324A),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.pending_actions_rounded,
+                      color: theme.primaryColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Unpaid Bills',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${widget.unpaidBills!.length} due',
+                        style: TextStyle(
+                          color: theme.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 SizedBox(
-                  height: (widget.unpaidBills!.length * 86.0).clamp(90.0, 280.0),
+                  height: (widget.unpaidBills!.length * 86.0).clamp(
+                    90.0,
+                    280.0,
+                  ),
                   child: ListView.builder(
                     itemCount: widget.unpaidBills!.length,
                     itemBuilder: (context, index) {
@@ -279,12 +326,14 @@ class _BillingPageState extends State<BillingPage> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: selected
+                                ? theme.primaryColor.withOpacity(0.12)
+                                : theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: selected
-                                  ? const Color(0xFF0D7D8F)
-                                  : const Color(0xFFDCE5EE),
+                                  ? theme.primaryColor
+                                  : theme.dividerColor,
                               width: selected ? 1.6 : 1,
                             ),
                           ),
@@ -292,9 +341,9 @@ class _BillingPageState extends State<BillingPage> {
                             children: [
                               Icon(
                                 selected
-                                    ? Icons.radio_button_checked
-                                    : Icons.radio_button_off,
-                                color: const Color(0xFF0D7D8F),
+                                    ? Icons.check_circle_rounded
+                                    : Icons.receipt_outlined,
+                                color: theme.primaryColor,
                                 size: 20,
                               ),
                               const SizedBox(width: 10),
@@ -303,19 +352,23 @@ class _BillingPageState extends State<BillingPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Order: ${bill.orderId}',
-                                      style: const TextStyle(
+                                      bill.orderId,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF12324A),
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.colorScheme.onSurface,
                                       ),
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
                                       '${bill.senderName} -> ${bill.receiverName}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.blueGrey.shade600,
+                                        color: secondaryText,
                                       ),
                                     ),
                                   ],
@@ -323,8 +376,8 @@ class _BillingPageState extends State<BillingPage> {
                               ),
                               Text(
                                 '৳ ${bill.amount.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  color: Color(0xFF0D7D8F),
+                                style: TextStyle(
+                                  color: theme.primaryColor,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -336,27 +389,37 @@ class _BillingPageState extends State<BillingPage> {
                     },
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFDCE5EE)),
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.dividerColor),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Selected Order Details',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF12324A),
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: theme.primaryColor,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Selected Order Details',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       _detailText(
                         'Sender',
                         '${_selectedBill.senderName} (${_selectedBill.senderPhone})',
@@ -377,17 +440,20 @@ class _BillingPageState extends State<BillingPage> {
                         'Distance',
                         '${_selectedBill.distance} | ${_selectedBill.estimatedTime}',
                       ),
-                      _detailText('Created', _formatDateTime(_selectedBill.createdAt)),
+                      _detailText(
+                        'Created',
+                        _formatDateTime(_selectedBill.createdAt),
+                      ),
                     ],
                   ),
                 ),
               ],
               const SizedBox(height: 20),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'Select Payment Type',
                 style: TextStyle(
-                  color: Color(0xFF12324A),
+                  color: theme.colorScheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
@@ -412,11 +478,11 @@ class _BillingPageState extends State<BillingPage> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _handlePayment,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D7D8F),
+                    backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    padding: const EdgeInsets.symmetric(vertical: 17),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: _loading
@@ -453,21 +519,28 @@ class _BillingPageState extends State<BillingPage> {
     required IconData icon,
   }) {
     final selected = _paymentMethod == value;
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return InkWell(
       onTap: () => setState(() => _paymentMethod = value),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: selected
+              ? theme.primaryColor.withOpacity(0.12)
+              : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? const Color(0xFF0D7D8F) : const Color(0xFFD8E3ED),
+            color: selected ? theme.primaryColor : theme.dividerColor,
             width: selected ? 1.8 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withOpacity(0.35),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -476,8 +549,8 @@ class _BillingPageState extends State<BillingPage> {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: const Color(0xFFEAF6F8),
-              child: Icon(icon, color: const Color(0xFF0D7D8F)),
+              backgroundColor: theme.primaryColor.withOpacity(0.14),
+              child: Icon(icon, color: theme.primaryColor),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -486,32 +559,25 @@ class _BillingPageState extends State<BillingPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF12324A),
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.blueGrey.shade500,
-                    ),
+                    style: TextStyle(fontSize: 13, color: secondaryText),
                   ),
                 ],
               ),
             ),
-            Radio<String>(
-              value: value,
-              groupValue: _paymentMethod,
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() => _paymentMethod = v);
-                }
-              },
-              activeColor: const Color(0xFF0D7D8F),
+            Icon(
+              selected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: selected ? theme.primaryColor : secondaryText,
             ),
           ],
         ),
@@ -521,11 +587,38 @@ class _BillingPageState extends State<BillingPage> {
 
   Widget _detailText(String label, String value) {
     final cleanValue = value.trim().isEmpty ? 'N/A' : value.trim();
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        '$label: $cleanValue',
-        style: TextStyle(fontSize: 11.5, color: Colors.blueGrey.shade700),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: secondaryText,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              cleanValue,
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

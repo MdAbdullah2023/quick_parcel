@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:quick_parcel/coustomer/login.dart';
 import 'package:quick_parcel/coustomer/sendPackage.dart';
+import 'package:quick_parcel/driver/driver_login.dart';
 import 'package:quick_parcel/services/widget_support.dart';
 
 class Intropage extends StatefulWidget {
@@ -16,6 +17,75 @@ class _IntropageState extends State<Intropage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
+  void _navigateToDriverLogin(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const DriverLoginScreen()),
+    );
+  }
+
+  void _showRoleSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppWidget.surfaceColor,
+        title: Text(
+          'Choose Your Role',
+          style: AppWidget.boldTextFieldStyle(22.0),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Are you here to send packages or deliver them?',
+              style: AppWidget.LightTextFieldStyle(14.0),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToLogin(context);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D7D8F),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Customer',
+                style: AppWidget.boldTextFieldStyle(
+                  14.0,
+                ).copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToDriverLogin(context);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF57C00),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Driver',
+                style: AppWidget.boldTextFieldStyle(
+                  14.0,
+                ).copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -100,11 +170,15 @@ class _IntropageState extends State<Intropage> {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Colors.white, Colors.grey.shade50],
+                        colors: [
+                          AppWidget.surfaceColor,
+                          AppWidget.surfaceAltColor,
+                        ],
                       ),
+                      border: Border.all(color: AppWidget.borderColor),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: AppWidget.shadowColor,
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -243,17 +317,26 @@ class _IntropageState extends State<Intropage> {
                   ),
 
                   const SizedBox(height: 30),
-                
 
                   // get started button
                   GestureDetector(
-                    onTap: () => _navigateToLogin(context),
+                    onTap: () => _showRoleSelectionDialog(context),
                     child: Container(
                       width: MediaQuery.of(context).size.width / 1.7,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppWidget.surfaceColor,
                         borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: const Color(0xFF0D7D8F).withOpacity(0.35),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppWidget.shadowColor,
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,

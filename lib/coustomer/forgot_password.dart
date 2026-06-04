@@ -64,24 +64,28 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reset Password'),
-        backgroundColor: const Color(0xFF0D7D8F),
-        elevation: 0,
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text('Reset Password')),
+      body: Container(
+        color: theme.scaffoldBackgroundColor,
         padding: const EdgeInsets.all(30),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Enter your email and we will send you a password reset link',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
+              const SizedBox(height: 24),
 
               // email Field
               CustomTextField(
@@ -103,7 +107,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               ElevatedButton(
                 onPressed: _isLoading ? null : passwordReset,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D7D8F),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
                     vertical: 15,

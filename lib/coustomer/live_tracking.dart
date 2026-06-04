@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LiveTrackingPage extends StatefulWidget {
   const LiveTrackingPage({super.key});
@@ -12,7 +15,6 @@ class LiveTrackingPage extends StatefulWidget {
 
 class _LiveTrackingPageState extends State<LiveTrackingPage> {
   static const Color _primary = Color(0xFF0D7D8F);
-  static const Color _bg = Color(0xFFF5F5F5);
 
   String? _userId;
   bool _loadingUser = true;
@@ -58,8 +60,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     switch (status.toLowerCase()) {
       case 'pending':
         return const Color(0xFFF59E0B);
+      case 'assigned':
+      case 'accepted':
       case 'confirmed':
         return const Color(0xFF3B82F6);
+      case 'received':
+        return const Color(0xFF0D9488);
       case 'in transit':
         return _primary;
       case 'delivered':
@@ -72,28 +78,19 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   }
 
   Color _statusBg(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return const Color(0xFFFFFBEB);
-      case 'confirmed':
-        return const Color(0xFFEFF6FF);
-      case 'in transit':
-        return const Color(0xFFE8F5F7);
-      case 'delivered':
-        return const Color(0xFFF0FDF4);
-      case 'cancelled':
-        return const Color(0xFFFEF2F2);
-      default:
-        return Colors.grey.shade50;
-    }
+    return _statusColor(status).withOpacity(0.14);
   }
 
   IconData _statusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
         return Icons.access_time_rounded;
+      case 'assigned':
+      case 'accepted':
       case 'confirmed':
         return Icons.check_circle_outline_rounded;
+      case 'received':
+        return Icons.inventory_2_outlined;
       case 'in transit':
         return Icons.local_shipping_outlined;
       case 'delivered':
@@ -109,12 +106,16 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     switch (status.toLowerCase()) {
       case 'pending':
         return 0;
+      case 'assigned':
+      case 'accepted':
       case 'confirmed':
         return 1;
-      case 'in transit':
+      case 'received':
         return 2;
-      case 'delivered':
+      case 'in transit':
         return 3;
+      case 'delivered':
+        return 4;
       default:
         return -1;
     }
@@ -148,7 +149,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           //  Header ─
@@ -268,6 +269,27 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   //  tracking card ─
 
   Widget _trackingCard(Map<String, dynamic> data) {
+    final orderId = (data['OrderId'] ?? '').toString();
+    if (orderId.isEmpty) {
+      return _trackingCardContent(data);
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('Order')
+          .doc(orderId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final latestData = snapshot.data?.data();
+        final mergedData = latestData == null
+            ? data
+            : <String, dynamic>{...data, ...latestData, 'OrderId': orderId};
+        return _trackingCardContent(mergedData);
+      },
+    );
+  }
+
+  Widget _trackingCardContent(Map<String, dynamic> data) {
     final status = data['Status'] ?? 'Pending';
     final orderId = data['OrderId'] ?? 'No Tracking ID';
     final createdAt = (data['CreatedAt'] ?? '').toString();
@@ -282,11 +304,11 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppWidget.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppWidget.shadowColor,
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -305,19 +327,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
             child: Row(
               children: [
-                Icon(_statusIcon(status), color: _statusColor(status), size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    orderId,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+                Icon(
+                  _statusIcon(status),
+                  color: _statusColor(status),
+                  size: 20,
                 ),
+                const SizedBox(width: 8),
+                Expanded(child: _trackingNumberRow(orderId.toString())),
                 _statusBadge(status),
               ],
             ),
@@ -350,6 +366,8 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
+          _driverInfoSection(data),
+
           if (status.toLowerCase() != 'cancelled')
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -365,7 +383,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                   _formatDate(createdAt),
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade400,
+                    color: AppWidget.textSecondaryColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -396,8 +414,180 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     );
   }
 
+  Widget _trackingNumberRow(String orderId) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            orderId,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppWidget.textPrimaryColor,
+              letterSpacing: 0.3,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 6),
+        InkWell(
+          onTap: () => _copyTrackingNumber(orderId),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Icon(
+              Icons.copy_rounded,
+              color: AppWidget.textSecondaryColor,
+              size: 16,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _driverInfoSection(Map<String, dynamic> data) {
+    final driverId = _driverIdFromOrder(data);
+    final cachedName = (data['DriverName'] ?? '').toString();
+    final cachedPhone = (data['DriverPhone'] ?? '').toString();
+
+    if (driverId.isEmpty && cachedName.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (cachedName.isNotEmpty || driverId.isEmpty) {
+      return _driverChip(
+        name: cachedName.isNotEmpty ? cachedName : 'Driver',
+        phone: cachedPhone,
+      );
+    }
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: DatabaseMethods().getDriverDetail(driverId),
+      builder: (context, snapshot) {
+        final driver = snapshot.data?.data();
+        final name = (driver?['Name'] ?? 'Driver').toString();
+        final phone = (driver?['Phone'] ?? '').toString();
+        return _driverChip(name: name, phone: phone);
+      },
+    );
+  }
+
+  Widget _driverChip({required String name, required String phone}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: InkWell(
+          onTap: () => _showDriverPhone(name, phone),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: _primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _primary.withOpacity(0.25)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.local_shipping_outlined,
+                  color: _primary,
+                  size: 14,
+                ),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    name,
+                    style: const TextStyle(
+                      color: _primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _driverIdFromOrder(Map<String, dynamic> data) {
+    return (data['AcceptedBy'] ??
+            data['AssignedDriver'] ??
+            data['DriverId'] ??
+            '')
+        .toString();
+  }
+
+  Future<void> _copyTrackingNumber(String orderId) async {
+    if (orderId.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: orderId));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Tracking number copied')));
+  }
+
+  void _showDriverPhone(String name, String phone) {
+    final cleanPhone = phone.trim();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(name),
+        content: cleanPhone.isEmpty
+            ? const Text('Driver phone number is not available yet.')
+            : InkWell(
+                onTap: () => _openDialer(cleanPhone),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.call, color: _primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        cleanPhone,
+                        style: const TextStyle(
+                          color: _primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openDialer(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    final launched = await launchUrl(uri);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open phone dialer')),
+      );
+    }
+  }
+
   Widget _progressTracker(String status) {
-    final steps = ['Pending', 'Confirmed', 'In Transit', 'Delivered'];
+    final steps = ['Pending', 'Confirmed', 'Received', 'In Transit', 'Delivered'];
     final currentStep = _statusStep(status);
 
     return Row(
@@ -408,7 +598,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           return Expanded(
             child: Container(
               height: 2,
-              color: isDone ? _primary : Colors.grey.shade200,
+              color: isDone ? _primary : AppWidget.borderColor,
             ),
           );
         }
@@ -424,9 +614,9 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDone ? _primary : Colors.grey.shade100,
+                color: isDone ? _primary : AppWidget.surfaceAltColor,
                 border: Border.all(
-                  color: isDone ? _primary : Colors.grey.shade300,
+                  color: isDone ? _primary : AppWidget.borderColor,
                   width: isCurrent ? 2.5 : 1.5,
                 ),
                 boxShadow: isCurrent
@@ -442,7 +632,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               child: Icon(
                 isDone ? Icons.check_rounded : _stepIcon(stepIdx),
                 size: 13,
-                color: isDone ? Colors.white : Colors.grey.shade400,
+                color: isDone ? Colors.white : AppWidget.textSecondaryColor,
               ),
             ),
             const SizedBox(height: 4),
@@ -451,7 +641,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                color: isDone ? _primary : Colors.grey.shade400,
+                color: isDone ? _primary : AppWidget.textSecondaryColor,
               ),
             ),
           ],
@@ -467,8 +657,10 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       case 1:
         return Icons.check_circle_outline_rounded;
       case 2:
-        return Icons.local_shipping_outlined;
+        return Icons.inventory_2_outlined;
       case 3:
+        return Icons.local_shipping_outlined;
+      case 4:
         return Icons.done_all_rounded;
       default:
         return Icons.circle_outlined;

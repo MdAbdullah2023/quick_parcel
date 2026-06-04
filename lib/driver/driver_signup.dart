@@ -1,78 +1,57 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:quick_parcel/coustomer/bottomnav.dart';
-import 'package:quick_parcel/coustomer/login.dart';
-import 'package:quick_parcel/coustomer/find_driver.dart';
+import 'package:quick_parcel/driver/driver_bottomnav.dart';
+import 'package:quick_parcel/driver/driver_login.dart';
 import 'package:quick_parcel/services/CustomTextField.dart';
-import 'package:quick_parcel/services/widget_support.dart';
-import 'package:quick_parcel/services/pending_order_service.dart';
 import 'package:random_string/random_string.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
-import 'package:quick_parcel/models/order_model.dart';
+import 'package:quick_parcel/services/widget_support.dart';
 
-class SignUpScreen extends StatefulWidget {
-  final OrderData? pendingOrderData;
-
-  const SignUpScreen({super.key, this.pendingOrderData});
+class DriverSignUpScreen extends StatefulWidget {
+  const DriverSignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  State<DriverSignUpScreen> createState() => _DriverSignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _DriverSignUpScreenState extends State<DriverSignUpScreen> {
+  static const Color _primary = Color(0xFFF57C00); // Orange for Driver
+
   final _formKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
-  final _nidController = TextEditingController();
+  final _licenseController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _vehicleNumberController = TextEditingController();
 
   bool _agreeToTerms = false;
   bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _autoFillOrderData();
-  }
-
-  void _autoFillOrderData() {
-    if (widget.pendingOrderData != null) {
-      final data = widget.pendingOrderData!;
-      if (data.senderName != null && data.senderName!.isNotEmpty) {
-        _nameController.text = data.senderName!;
-      }
-      if (data.senderPhone != null && data.senderPhone!.isNotEmpty) {
-        _phoneController.text = data.senderPhone!;
-      }
-      if (data.senderEmail != null && data.senderEmail!.isNotEmpty) {
-        _emailController.text = data.senderEmail!;
-      }
-      if (data.senderNid != null && data.senderNid!.isNotEmpty) {
-        _nidController.text = data.senderNid!;
-      }
-    }
-  }
+  final bool _showPassword = false;
+  final bool _showConfirmPassword = false;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _nidController.dispose();
+    _licenseController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _vehicleNumberController.dispose();
     super.dispose();
   }
 
-  String? _validateStrongPassword(String? value) {
+  String? _validatePassword(String? value) {
     final password = value?.trim() ?? '';
     if (password.isEmpty) return 'Enter password';
-    if (password.length < 8) return 'Password must be at least 8 characters';
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
     if (!RegExp(r'[A-Z]').hasMatch(password)) {
       return 'Password must contain uppercase letter';
     }
@@ -101,7 +80,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.orange,
+          backgroundColor: Colors.red,
           content: Text('Please fill all fields correctly'),
         ),
       );
@@ -111,7 +90,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.orange,
+          backgroundColor: Color(0xFFF57C00),
           content: Text('Please agree to the terms & policy'),
         ),
       );
@@ -140,74 +119,48 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       final String customId = randomAlphaNumeric(10);
 
-      final userInfoMap = {
+      final driverInfoMap = {
         'Id': customId,
         'FirebaseUid': credential.user?.uid ?? '',
         'Name': _nameController.text.trim(),
-        'NID': _nidController.text.trim(),
+        'LicenseNumber': _licenseController.text.trim(),
         'Email': _emailController.text.trim(),
         'Phone': _phoneController.text.trim(),
+        'VehicleNumber': _vehicleNumberController.text.trim(),
+        'UserType': 'Driver',
         'CreatedAt': DateTime.now().toIso8601String(),
+        'IsVerified': false,
+        'Rating': 5.0,
+        'TotalDeliveries': 0,
       };
 
-      await DatabaseMethods().addUserDetail(userInfoMap, customId);
+      await DatabaseMethods().addDriverDetail(driverInfoMap, customId);
 
       await SharedpreferenceHelper().saveUserId(customId);
       await SharedpreferenceHelper().saveUserName(_nameController.text.trim());
       await SharedpreferenceHelper().saveUserEmail(
         _emailController.text.trim(),
       );
-      await SharedpreferenceHelper().saveUserType('Customer');
+      await SharedpreferenceHelper().saveUserType('Driver');
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('✅ Registration successful!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+      if (!mounted) return;
 
-        // Check if there's a pending order
-        if (widget.pendingOrderData != null) {
-          // Place the pending order and navigate to Find Driver
-          await _placePendingOrder(customId);
-        } else {
-          // No pending order, go to home
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const BottomNav()),
-          );
-        }
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFF57C00),
+          content: Text('Sign up successful! Welcome Driver!'),
+        ),
+      );
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const DriverBottomNav()),
+      );
     } on FirebaseAuthException catch (e) {
-      String message = 'Registration failed';
-      switch (e.code) {
-        case 'weak-password':
-          message =
-              'Password is too weak. Use uppercase, lowercase, number and special character.';
-          break;
-        case 'email-already-in-use':
-          message = 'This email is already registered. Try logging in.';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email format.';
-          break;
-        case 'operation-not-allowed':
-          message = 'Email/Password authentication is not enabled.';
-          break;
-        case 'network-request-failed':
-          message = 'Network error. Check your internet connection.';
-          break;
-        default:
-          message = e.message ?? 'Registration failed. Please try again.';
-      }
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,
-            content: Text(message),
-            duration: const Duration(seconds: 3),
+            content: Text(e.message ?? 'Sign up failed'),
           ),
         );
       }
@@ -217,7 +170,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           SnackBar(
             backgroundColor: Colors.red,
             content: Text('Error: ${e.toString()}'),
-            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -228,76 +180,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  Future<void> _placePendingOrder(String userId) async {
-    try {
-      final orderData = widget.pendingOrderData!;
-      final orderId = 'QP-${DateTime.now().millisecondsSinceEpoch}';
-
-      final orderInfo = {
-        'OrderId': orderId,
-        'UserId': userId,
-        'SenderName': orderData.senderName ?? '',
-        'SenderPhone': orderData.senderPhone ?? '',
-        'ReceiverName': orderData.recipientName ?? '',
-        'ReceiverPhone': orderData.recipientPhone ?? '',
-        'PickupAddress': orderData.pickupAddress,
-        'DropoffAddress': orderData.dropoffAddress,
-        'PackageSize': orderData.packageSize,
-        'PackageDescription': orderData.packageDescription,
-        'Distance': orderData.distance,
-        'EstimatedTime': orderData.estimatedTime,
-        'Price': orderData.estimatedPrice.toStringAsFixed(0),
-        'PaymentStatus': 'Unpaid',
-        'PaymentMethod': 'Pending',
-        'PaymentProvider': '',
-        'PaidAmount': 0,
-        'TransactionId': '',
-        'Status': 'Pending',
-        'CreatedAt': DateTime.now().toIso8601String(),
-      };
-
-      await DatabaseMethods().addUserOrder(orderInfo, userId, orderId);
-      await DatabaseMethods().addAdminOrder(orderInfo, orderId);
-
-      // Clear the pending order from storage
-      await PendingOrderService.clearPendingOrder();
-
-      if (mounted) {
-        // Navigate to Find Driver
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => FindDriverScreen(
-              orderId: orderId,
-              pickupLat: orderData.pickupLat.toString(),
-              pickupLng: orderData.pickupLng.toString(),
-              dropoffLat: orderData.dropoffLat.toString(),
-              dropoffLng: orderData.dropoffLng.toString(),
-              pickupAddress: orderData.pickupAddress,
-              dropoffAddress: orderData.dropoffAddress,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error placing pending order: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text('Error placing order: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.primaryColor,
+      backgroundColor: _primary,
       body: Column(
         children: [
           const SizedBox(height: 50),
@@ -312,7 +200,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               children: [
                 const SizedBox(height: 20),
                 const Text(
-                  'Sign up',
+                  'Driver Sign up',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 48,
@@ -329,7 +217,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 Text(
-                  'Faster deliveries start here',
+                  'Start earning with deliveries',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 16,
@@ -359,10 +247,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     children: [
                       // Name Field
                       CustomTextField(
-                        label: 'Name',
-                        hint: 'Enter your name',
+                        label: 'Full Name',
+                        hint: 'Enter your full name',
                         prefixIcon: Icons.person_outline,
                         controller: _nameController,
+                        primaryColor: const Color(0xFFF57C00),
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Please enter your name'
                             : null,
@@ -370,19 +259,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // NID Number Field
+                      // License Number Field
                       CustomTextField(
-                        label: 'NID Number',
-                        hint: 'Enter your NID number',
+                        label: 'License Number',
+                        hint: 'Enter your license number',
                         prefixIcon: Icons.badge_outlined,
-                        controller: _nidController,
-                        keyboardType: TextInputType.number,
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return 'Enter NID number';
-                          if (value.length < 10) return 'Invalid NID number';
-                          return null;
-                        },
+                        controller: _licenseController,
+                        primaryColor: const Color(0xFFF57C00),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Enter license number'
+                            : null,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Vehicle Number Field
+                      CustomTextField(
+                        label: 'Vehicle Number',
+                        hint: 'Enter vehicle number (e.g., ABC-1234)',
+                        prefixIcon: Icons.directions_car,
+                        controller: _vehicleNumberController,
+                        primaryColor: const Color(0xFFF57C00),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Enter vehicle number'
+                            : null,
                       ),
 
                       const SizedBox(height: 12),
@@ -394,6 +294,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: Icons.phone_outlined,
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
+                        primaryColor: const Color(0xFFF57C00),
                         validator: _validatePhoneNumber,
                       ),
 
@@ -406,6 +307,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: Icons.email_outlined,
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        primaryColor: const Color(0xFFF57C00),
                         validator: (v) {
                           final value = v?.trim() ?? '';
                           if (value.isEmpty) return 'Enter email';
@@ -424,18 +326,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: Icons.lock_outline,
                         controller: _passwordController,
                         isPassword: true,
-                        validator: _validateStrongPassword,
+                        primaryColor: const Color(0xFFF57C00),
+                        validator: _validatePassword,
                       ),
 
                       const SizedBox(height: 12),
 
                       // Confirm Password Field
                       CustomTextField(
-                        label: 'Re-enter password',
-                        hint: 'Confirm password',
+                        label: 'Confirm Password',
+                        hint: 'Re-enter your password',
                         prefixIcon: Icons.lock_outline,
                         controller: _confirmPasswordController,
                         isPassword: true,
+                        primaryColor: const Color(0xFFF57C00),
                         validator: (v) {
                           final value = v?.trim() ?? '';
                           if (value.isEmpty) return 'Confirm password';
@@ -459,7 +363,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               onChanged: (value) => setState(
                                 () => _agreeToTerms = value ?? false,
                               ),
-                              activeColor: theme.primaryColor,
+                              activeColor: const Color(0xFFF57C00),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -476,13 +380,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               children: [
                                 TextSpan(
                                   text: 'terms & policy',
-                                  style: TextStyle(
-                                    color: theme.primaryColor,
+                                  style: const TextStyle(
+                                    color: Color(0xFFF57C00),
                                     fontWeight: FontWeight.w600,
                                   ),
                                   recognizer: TapGestureRecognizer()
                                     ..onTap = () {
-                                      //  terms screen/url
+                                      // terms screen/url
                                     },
                                 ),
                               ],
@@ -497,32 +401,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       AppWidget.primaryActionButton(
                         context: context,
                         label: 'Sign up',
+                        color: _primary,
                         loading: _loading,
                         onPressed: _loading ? null : _handleSignUp,
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
 
-                      // Sign In
+                      // Login Link
                       Center(
                         child: RichText(
                           text: TextSpan(
-                            text: 'Have an account? ',
+                            text: 'Already have an account? ',
                             style: TextStyle(
                               color: theme.textTheme.bodyMedium?.color,
-                              fontSize: 16,
+                              fontSize: 15,
                             ),
                             children: [
                               TextSpan(
-                                text: 'Sign in',
-                                style: AppWidget.GreenTextfeildStyle(16.0),
+                                text: 'Login',
+                                style: const TextStyle(
+                                  color: Color(0xFFF57C00),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
-                                    Navigator.push(
-                                      context,
+                                    Navigator.of(context).pushReplacement(
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const LoginScreen(),
+                                            const DriverLoginScreen(),
                                       ),
                                     );
                                   },

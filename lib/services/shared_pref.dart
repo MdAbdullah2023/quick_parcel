@@ -4,6 +4,7 @@ class SharedpreferenceHelper {
   static const String _userIdKey = "USER_ID";
   static const String _userNameKey = "USER_NAME";
   static const String _userEmailKey = "USER_EMAIL";
+  static const String _userTypeKey = "USER_TYPE";
 
   // save user ID
   Future<void> saveUserId(String id) async {
@@ -83,5 +84,15 @@ class SharedpreferenceHelper {
   Future<String?> getUserPhone() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userPhoneKey);
+  }
+
+  Future<void> saveUserType(String userType) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userTypeKey, userType);
+  }
+
+  Future<String?> getUserType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userTypeKey);
   }
 }

@@ -80,7 +80,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final ordersSnapshot = await DatabaseMethods().getUserOrders(userId).first;
+      final ordersSnapshot = await DatabaseMethods()
+          .getUserOrders(userId)
+          .first;
       final unpaidBills = <UnpaidBillItem>[];
 
       for (final doc in ordersSnapshot.docs) {
@@ -93,17 +95,19 @@ class _HomeScreenState extends State<HomeScreen> {
         final orderId = (data['OrderId'] ?? doc.id).toString();
         final amount = _parseAmount(data['Price']);
         final senderName =
-          (data['SenderName'] ?? data['ReceiverName'] ?? userName).toString();
-        final senderPhone =
-          (data['SenderPhone'] ?? data['ReceiverPhone'] ?? '').toString();
+            (data['SenderName'] ?? data['ReceiverName'] ?? userName).toString();
+        final senderPhone = (data['SenderPhone'] ?? data['ReceiverPhone'] ?? '')
+            .toString();
         final receiverName =
-          (data['ReceiverName'] ?? data['SenderName'] ?? 'Receiver').toString();
+            (data['ReceiverName'] ?? data['SenderName'] ?? 'Receiver')
+                .toString();
         final receiverPhone =
-          (data['ReceiverPhone'] ?? data['SenderPhone'] ?? '').toString();
+            (data['ReceiverPhone'] ?? data['SenderPhone'] ?? '').toString();
         final pickupAddress = (data['PickupAddress'] ?? '').toString();
         final dropoffAddress = (data['DropoffAddress'] ?? '').toString();
         final packageSize = (data['PackageSize'] ?? '').toString();
-        final packageDescription = (data['PackageDescription'] ?? '').toString();
+        final packageDescription = (data['PackageDescription'] ?? '')
+            .toString();
         final distance = (data['Distance'] ?? '').toString();
         final estimatedTime = (data['EstimatedTime'] ?? '').toString();
         final createdAt = (data['CreatedAt'] ?? '').toString();
@@ -112,17 +116,17 @@ class _HomeScreenState extends State<HomeScreen> {
           UnpaidBillItem(
             orderId: orderId,
             amount: amount,
-          senderName: senderName,
-          senderPhone: senderPhone,
-          receiverName: receiverName,
-          receiverPhone: receiverPhone,
-          pickupAddress: pickupAddress,
-          dropoffAddress: dropoffAddress,
-          packageSize: packageSize,
-          packageDescription: packageDescription,
-          distance: distance,
-          estimatedTime: estimatedTime,
-          createdAt: createdAt,
+            senderName: senderName,
+            senderPhone: senderPhone,
+            receiverName: receiverName,
+            receiverPhone: receiverPhone,
+            pickupAddress: pickupAddress,
+            dropoffAddress: dropoffAddress,
+            packageSize: packageSize,
+            packageDescription: packageDescription,
+            distance: distance,
+            estimatedTime: estimatedTime,
+            createdAt: createdAt,
           ),
         );
       }
@@ -181,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? 'Payment successful for bill $orderId'
                 : 'Billing updated for order $orderId',
           ),
-          backgroundColor: const Color(0xFF2E7D32),
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
         ),
       );
     } catch (e) {
@@ -189,21 +193,74 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Billing failed: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
+  Future<void> _searchTrackingNumber() async {
+    final trackingNumber = _trackingController.text.trim();
+    if (trackingNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a tracking number'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final userId = await SharedpreferenceHelper().getUserId();
+      if (userId == null || userId.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login to track your package.')),
+        );
+        return;
+      }
+
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('Order')
+          .where('OrderId', isEqualTo: trackingNumber)
+          .limit(1)
+          .get();
+
+      if (!mounted) return;
+      if (query.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No package found for $trackingNumber')),
+        );
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LiveTrackingPage()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Tracking search failed: $e')));
+    }
+  }
+
   // profile pic
-  Widget _buildProfilePicture() {
+  Widget _buildProfilePicture(BuildContext context) {
     return Container(
       width: 60,
       height: 60,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.surface,
+          width: 3,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -214,13 +271,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: ClipOval(
         child: _loadingProfile
-            ? const Center(
+            ? Center(
                 child: SizedBox(
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(Color(0xFF0D7D8F)),
+                    valueColor: AlwaysStoppedAnimation(
+                      Theme.of(context).primaryColor,
+                    ),
                   ),
                 ),
               )
@@ -228,10 +287,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ? Image.network(
                 profileImageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
+                errorBuilder: (_, _, _) => Icon(
                   Icons.person,
                   size: 35,
-                  color: Color(0xFF0D7D8F),
+                  color: Theme.of(context).primaryColor,
                 ),
               )
             : const Icon(Icons.person, size: 35, color: Color(0xFF0D7D8F)),
@@ -247,8 +306,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           Material(
@@ -259,8 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFF0D7D8F),
-                    const Color(0xFF0D7D8F).withOpacity(0.85),
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withOpacity(0.85),
                   ],
                 ),
                 borderRadius: const BorderRadius.only(
@@ -285,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           // refresh profile data when returning
                           _loadUserInfo();
                         },
-                        child: _buildProfilePicture(),
+                        child: _buildProfilePicture(context),
                       ),
                       const SizedBox(width: 15),
                       Column(
@@ -315,27 +376,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // search track
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Theme.of(context).primaryColor.withOpacity(0.18),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.28),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Track Your Package',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1A1A2E),
+                            color: Theme.of(context).textTheme.bodyLarge!.color,
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -345,7 +409,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             'Enter your tracking number to get live updates',
                             style: TextStyle(
-                              color: Colors.grey.shade500,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium!.color,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               letterSpacing: 0.1,
@@ -357,32 +423,61 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               child: Container(
+                                height: 54,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
+                                  horizontal: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF0FAFB),
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).inputDecorationTheme.fillColor ??
+                                      Theme.of(context).colorScheme.surface,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: const Color(
-                                      0xFF0D7D8F,
-                                    ).withOpacity(0.15),
+                                    color: isDark
+                                        ? Colors.white.withOpacity(0.14)
+                                        : const Color(
+                                            0xFF172F35,
+                                          ).withOpacity(0.72),
+                                    width: 1.2,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(
+                                        isDark ? 0.26 : 0.1,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
                                 child: TextField(
                                   controller: _trackingController,
-                                  style: const TextStyle(
+                                  textInputAction: TextInputAction.search,
+                                  onSubmitted: (_) => _searchTrackingNumber(),
+                                  style: TextStyle(
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1A1A2E),
+                                    fontWeight: FontWeight.w700,
+                                    color: Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge!.color,
                                   ),
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'e.g. QP-2026-XXXXXX',
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    hintText: 'Enter tracking number',
                                     hintStyle: TextStyle(
-                                      color: Colors.grey.shade400,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium!.color,
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w400,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                      vertical: 16,
                                     ),
                                   ),
                                 ),
@@ -393,10 +488,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               height: 52,
                               width: 52,
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
+                                gradient: LinearGradient(
                                   colors: [
-                                    Color(0xFF0D7D8F),
-                                    Color(0xFF0A9BAF),
+                                    Theme.of(context).primaryColor,
+                                    Theme.of(
+                                      context,
+                                    ).primaryColor.withOpacity(0.8),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -404,9 +501,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 borderRadius: BorderRadius.circular(14),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(
-                                      0xFF0D7D8F,
-                                    ).withOpacity(0.35),
+                                    color: Theme.of(
+                                      context,
+                                    ).primaryColor.withOpacity(0.35),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -418,30 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.white,
                                   size: 22,
                                 ),
-                                onPressed: () {
-                                  final trackingNumber = _trackingController
-                                      .text
-                                      .trim();
-                                  if (trackingNumber.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Please enter a tracking number',
-                                        ),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Tracking feature coming soon',
-                                        ),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                                onPressed: _searchTrackingNumber,
                               ),
                             ),
                           ],

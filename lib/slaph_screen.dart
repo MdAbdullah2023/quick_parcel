@@ -1,5 +1,10 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:quick_parcel/coustomer/bottomnav.dart';
+import 'package:quick_parcel/driver/driver_bottomnav.dart';
+import 'package:quick_parcel/introPage.dart';
+import 'package:quick_parcel/services/shared_pref.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,9 +17,30 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/intro');
-    });
+    Timer(const Duration(seconds: 3), _goNext);
+  }
+
+  Future<void> _goNext() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final helper = SharedpreferenceHelper();
+    final userId = await helper.getUserId();
+    final userType = await helper.getUserType();
+
+    if (!mounted) return;
+
+    Widget nextPage = const Intropage();
+    if (user != null && userId != null && userId.isNotEmpty) {
+      if (userType == 'Driver') {
+        nextPage = const DriverBottomNav();
+      } else {
+        nextPage = const BottomNav();
+      }
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => nextPage),
+    );
   }
 
   @override

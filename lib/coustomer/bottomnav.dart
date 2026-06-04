@@ -27,16 +27,18 @@ class _BottomNavState extends State<BottomNav> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
+              color: Colors.black.withOpacity(isDark ? 0.45 : 0.1),
+              blurRadius: isDark ? 20 : 14,
+              offset: const Offset(0, -4),
             ),
           ],
           borderRadius: const BorderRadius.only(
@@ -53,9 +55,9 @@ class _BottomNavState extends State<BottomNav> {
             currentIndex: _selectedIndex,
             onTap: _onItemTapped,
             type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: const Color(0xFF0D7D8F),
-            unselectedItemColor: Colors.grey,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Theme.of(context).textTheme.bodySmall?.color,
             showSelectedLabels: false,
             showUnselectedLabels: false,
             elevation: 0,
@@ -70,13 +72,13 @@ class _BottomNavState extends State<BottomNav> {
                   'images/send_package.png',
                   height: 34,
                   width: 34,
-                  color: Colors.grey,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                 ),
                 activeIcon: Image.asset(
                   'images/send_package.png',
                   height: 34,
                   width: 34,
-                  color: const Color(0xFF0D7D8F),
+                  color: Theme.of(context).primaryColor,
                 ),
                 label: 'Send',
               ),
@@ -85,13 +87,13 @@ class _BottomNavState extends State<BottomNav> {
                   'images/live_traking.png',
                   height: 34,
                   width: 34,
-                  color: Colors.grey,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                 ),
                 activeIcon: Image.asset(
                   'images/live_traking.png',
                   height: 34,
                   width: 34,
-                  color: const Color(0xFF0D7D8F),
+                  color: Theme.of(context).primaryColor,
                 ),
                 label: 'Tracking',
               ),
@@ -100,13 +102,13 @@ class _BottomNavState extends State<BottomNav> {
                   'images/my_package.png',
                   height: 34,
                   width: 34,
-                  color: Colors.grey,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                 ),
                 activeIcon: Image.asset(
                   'images/my_package.png',
                   height: 34,
                   width: 34,
-                  color: const Color(0xFF0D7D8F),
+                  color: Theme.of(context).primaryColor,
                 ),
                 label: 'Packages',
               ),
