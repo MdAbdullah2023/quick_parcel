@@ -4,10 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
+import 'package:quick_parcel/shared/order_chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LiveTrackingPage extends StatefulWidget {
-  const LiveTrackingPage({super.key});
+  final String? trackingId;
+
+  const LiveTrackingPage({super.key, this.trackingId});
 
   @override
   State<LiveTrackingPage> createState() => _LiveTrackingPageState();
@@ -46,10 +49,20 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     if (_userId == null) {
       return const Stream.empty();
     }
-    return FirebaseFirestore.instance
+    final ordersRef = FirebaseFirestore.instance
         .collection('users')
         .doc(_userId)
-        .collection('Order')
+        .collection('Order');
+    final trackingId = widget.trackingId?.trim();
+
+    if (trackingId != null && trackingId.isNotEmpty) {
+      return ordersRef
+          .where('OrderId', isEqualTo: trackingId)
+          .limit(1)
+          .snapshots();
+    }
+
+    return ordersRef
         .orderBy('CreatedAt', descending: true)
         .snapshots();
   }
@@ -243,10 +256,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                       }
                       final allDocs = snapshot.data?.docs ?? [];
                       if (allDocs.isEmpty) {
+                        final trackingId = widget.trackingId?.trim();
                         return _emptyState(
                           icon: Icons.inbox_outlined,
-                          message:
-                              'No active deliveries.\nSend a package to get started!',
+                          message: trackingId == null || trackingId.isEmpty
+                              ? 'No active deliveries.\nSend a package to get started!'
+                              : 'No package found for $trackingId',
                         );
                       }
 
@@ -291,15 +306,16 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
   Widget _trackingCardContent(Map<String, dynamic> data) {
     final status = data['Status'] ?? 'Pending';
-    final orderId = data['OrderId'] ?? 'No Tracking ID';
-    final createdAt = (data['CreatedAt'] ?? '').toString();
-    final price = (data['Price'] ?? '0').toString();
-    final pickup = (data['PickupAddress'] ?? '').toString();
-    final dropoff = (data['DropoffAddress'] ?? '').toString();
-    final sender = (data['SenderName'] ?? '').toString();
-    final receiver = (data['ReceiverName'] ?? '').toString();
-    final packageSize = (data['PackageSize'] ?? '').toString();
-    final distance = (data['Distance'] ?? '').toString();
+    final orderId = data['OrderId'] ?? '';
+    final createdAt = data['CreatedAt'] ?? '';
+    final price = data['Price'] ?? '0';
+    final pickup = data['PickupAddress'] ?? '';
+    final dropoff = data['DropoffAddress'] ?? '';
+    final sender = data['SenderName'] ?? '';
+    final receiver = data['ReceiverName'] ?? '';
+    final packageSize = data['PackageSize'] ?? '';
+    final distance = data['Distance'] ?? '';
+    final photoUrl = data['PackagePhoto'] ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -339,18 +355,24 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
+          if (photoUrl.toString().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: MyPackagesWidgets.packageImage(photoUrl.toString()),
+            ),
+
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: _routeRow(pickup, dropoff),
+            child: _routeRow(pickup.toString(), dropoff.toString()),
           ),
 
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
               children: [
-                _detailChip(Icons.person_outline_rounded, sender),
+                _detailChip(Icons.person_outline_rounded, sender.toString()),
                 const SizedBox(width: 8),
-                _detailChip(Icons.person_pin_outlined, receiver),
+                _detailChip(Icons.person_pin_outlined, receiver.toString()),
               ],
             ),
           ),
@@ -359,19 +381,43 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
               children: [
-                _detailChip(Icons.inventory_2_outlined, packageSize),
+                _detailChip(
+                  Icons.inventory_2_outlined,
+                  packageSize.toString(),
+                ),
                 const SizedBox(width: 8),
-                _detailChip(Icons.route_outlined, distance),
+                _detailChip(Icons.route_outlined, distance.toString()),
               ],
             ),
           ),
 
           _driverInfoSection(data),
 
-          if (status.toLowerCase() != 'cancelled')
+          if (status.toString().toLowerCase() != 'cancelled')
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: _progressTracker(status),
+              child: _progressTracker(status.toString()),
+            ),
+
+          if (_driverIdFromOrder(data).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openOrderChat(data),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                  label: const Text('Chat with Driver'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _primary,
+                    side: BorderSide(color: _primary.withOpacity(0.7)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
             ),
 
           Padding(
@@ -522,6 +568,47 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             data['DriverId'] ??
             '')
         .toString();
+  }
+
+  Future<void> _openOrderChat(Map<String, dynamic> data) async {
+    final orderId = (data['OrderId'] ?? '').toString();
+    final driverId = _driverIdFromOrder(data);
+    final userId = _userId ?? await SharedpreferenceHelper().getUserId() ?? '';
+
+    if (orderId.isEmpty || userId.isEmpty || driverId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chat will be available after driver assignment'),
+        ),
+      );
+      return;
+    }
+
+    final helper = SharedpreferenceHelper();
+    final savedName = await helper.getUserName();
+    final customerName =
+        (savedName ?? data['SenderName'] ?? data['CustomerName'] ?? 'Customer')
+            .toString();
+    final driverName = (data['DriverName'] ?? 'Driver').toString();
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderChatPage(
+          orderId: orderId,
+          customerId: userId,
+          driverId: driverId,
+          customerName: customerName,
+          driverName: driverName,
+          currentUserId: userId,
+          currentUserName: customerName,
+          currentUserRole: 'Customer',
+          primaryColor: _primary,
+        ),
+      ),
+    );
   }
 
   Future<void> _copyTrackingNumber(String orderId) async {

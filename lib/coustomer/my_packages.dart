@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
+import 'package:quick_parcel/shared/order_chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MyPackagesPage extends StatefulWidget {
@@ -144,16 +145,32 @@ class _MyPackagesPageState extends State<MyPackagesPage>
 
   //  filter orders by tab
 
+  bool _isDeliveredStatus(String status) {
+    final normalized = status.toLowerCase();
+    return normalized == 'delivered' ||
+        normalized == 'complete' ||
+        normalized == 'completed';
+  }
+
   List<QueryDocumentSnapshot> _filteredOrders(
     List<QueryDocumentSnapshot> docs,
     int tabIndex,
   ) {
-    if (tabIndex == 0) return docs;
+    if (tabIndex == 0) {
+      return docs.where((d) {
+        final status = ((d.data() as Map)['Status'] ?? '').toString();
+        return !_isDeliveredStatus(status);
+      }).toList();
+    }
+
     final filter = _tabs[tabIndex].toLowerCase();
     return docs.where((d) {
       final status = ((d.data() as Map)['Status'] ?? '')
           .toString()
           .toLowerCase();
+      if (filter == 'delivered') {
+        return _isDeliveredStatus(status);
+      }
       return status == filter;
     }).toList();
   }
@@ -433,6 +450,27 @@ class _MyPackagesPageState extends State<MyPackagesPage>
               child: _progressTracker(status),
             ),
 
+          if (_driverIdFromOrder(data).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openOrderChat(data),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                  label: const Text('Chat with Driver'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _primary,
+                    side: BorderSide(color: _primary.withOpacity(0.7)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           //  footer ─
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
@@ -532,6 +570,47 @@ class _MyPackagesPageState extends State<MyPackagesPage>
         final phone = (driver?['Phone'] ?? '').toString();
         return _driverChip(name: name, phone: phone);
       },
+    );
+  }
+
+  Future<void> _openOrderChat(Map<String, dynamic> data) async {
+    final orderId = (data['OrderId'] ?? '').toString();
+    final driverId = _driverIdFromOrder(data);
+    final userId = _userId ?? await SharedpreferenceHelper().getUserId() ?? '';
+
+    if (orderId.isEmpty || userId.isEmpty || driverId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chat will be available after driver assignment'),
+        ),
+      );
+      return;
+    }
+
+    final helper = SharedpreferenceHelper();
+    final savedName = await helper.getUserName();
+    final customerName =
+        (savedName ?? data['SenderName'] ?? data['CustomerName'] ?? 'Customer')
+            .toString();
+    final driverName = (data['DriverName'] ?? 'Driver').toString();
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderChatPage(
+          orderId: orderId,
+          customerId: userId,
+          driverId: driverId,
+          customerName: customerName,
+          driverName: driverName,
+          currentUserId: userId,
+          currentUserName: customerName,
+          currentUserRole: 'Customer',
+          primaryColor: _primary,
+        ),
+      ),
     );
   }
 
@@ -654,7 +733,13 @@ class _MyPackagesPageState extends State<MyPackagesPage>
   //  progress tracker
 
   Widget _progressTracker(String status) {
-    final steps = ['Pending', 'Confirmed', 'Received', 'In Transit', 'Delivered'];
+    final steps = [
+      'Pending',
+      'Confirmed',
+      'Received',
+      'In Transit',
+      'Delivered',
+    ];
     final currentStep = _statusStep(status);
 
     return Row(

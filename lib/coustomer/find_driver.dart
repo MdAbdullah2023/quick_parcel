@@ -128,6 +128,22 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
     _showDriverDetailsBottomSheet(driver);
   }
 
+  bool _isDriverOnline(Map<String, dynamic> driver) {
+    final lastUpdate = _parseDriverDate(driver['LastLocationUpdate']);
+    if (lastUpdate == null) return false;
+
+    return driver['IsAvailable'] == true &&
+        DateTime.now().difference(lastUpdate).inSeconds <= 45;
+  }
+
+  DateTime? _parseDriverDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
   void _showDriverDetailsBottomSheet(Map<String, dynamic> driver) {
     showModalBottomSheet(
       context: context,
@@ -224,14 +240,17 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [_accentGreen, _accentGreen.withOpacity(0.85)],
+                        colors: [
+                          theme.primaryColor,
+                          theme.primaryColor.withOpacity(0.85),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: _accentGreen.withOpacity(0.3),
+                          color: theme.primaryColor.withOpacity(0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -734,7 +753,7 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
               })
               .where(
                 (driver) =>
-                    driver['IsAvailable'] == true &&
+                    _isDriverOnline(driver) &&
                     (driver['CurrentLat'] as num) != 0.0 &&
                     (driver['CurrentLng'] as num) != 0.0,
               )

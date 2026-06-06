@@ -327,7 +327,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void _onSearchChanged(bool isPickup) {
     _debounceTimer?.cancel();
 
-    final query = isPickup ? pickupController.text : dropoffController.text;
+    final query = (isPickup ? pickupController.text : dropoffController.text)
+        .trim();
 
     if (query.length < 2) {
       setState(() {
@@ -362,6 +363,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
 
     if (mounted) {
+      final currentQuery =
+          (isPickup ? pickupController.text : dropoffController.text).trim();
+      if (currentQuery != query.trim()) return;
+
       setState(() {
         if (isPickup) {
           _pickupPredictions = predictions;
@@ -379,6 +384,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     final details = await _placesService.getPlaceDetails(
       prediction.placeId,
       sessionToken: _sessionToken,
+      fallbackQuery: prediction.description,
     );
 
     if (details != null) {
@@ -791,65 +797,80 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final shadowColor = isDark
-        ? Colors.black.withOpacity(0.4)
+        ? Colors.black.withOpacity(0.34)
         : Colors.black.withOpacity(0.08);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : Colors.black.withOpacity(0.04),
+        ),
         boxShadow: [
           BoxShadow(
             color: shadowColor,
-            blurRadius: 12,
-            offset: const Offset(0, 2),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
+      child: Stack(
         children: [
-          // Pickup location
-          _buildLocationInputField(
-            controller: pickupController,
-            focusNode: pickupFocusNode,
-            hint: 'Pickup location',
-            isActive: _isPickupFieldActive,
-            isSearching: _isSearchingPickup || _isLoadingCurrentLocation,
-            onClear: () {
-              pickupController.clear();
-              setState(() {
-                _pickupLocation = null;
-                _pickupPredictions = [];
-              });
-            },
-            locationIcon: Icons.my_location,
-            showCheckmark: _pickupLocation != null,
+          Positioned(
+            left: 17,
+            top: 44,
+            bottom: 44,
+            child: Container(
+              width: 2,
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.22),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
           ),
-
-          // Divider
-          Container(
-            height: 1,
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-          ),
-
-          // Dropoff location
-          _buildLocationInputField(
-            controller: dropoffController,
-            focusNode: dropoffFocusNode,
-            hint: "Recipient's location",
-            isActive: !_isPickupFieldActive,
-            isSearching: _isSearchingDropoff,
-            onClear: () {
-              dropoffController.clear();
-              setState(() {
-                _dropoffLocation = null;
-                _dropoffPredictions = [];
-              });
-            },
-            locationIcon: Icons.location_on,
-            showCheckmark: _dropoffLocation != null,
+          Column(
+            children: [
+              _buildLocationInputField(
+                controller: pickupController,
+                focusNode: pickupFocusNode,
+                label: 'Pickup',
+                hint: 'Pickup location',
+                isActive: _isPickupFieldActive,
+                isSearching: _isSearchingPickup || _isLoadingCurrentLocation,
+                onClear: () {
+                  pickupController.clear();
+                  setState(() {
+                    _pickupLocation = null;
+                    _pickupPredictions = [];
+                  });
+                },
+                locationIcon: Icons.my_location,
+                showCheckmark: _pickupLocation != null,
+              ),
+              const SizedBox(height: 10),
+              _buildLocationInputField(
+                controller: dropoffController,
+                focusNode: dropoffFocusNode,
+                label: 'Recipient',
+                hint: "Recipient's location",
+                isActive: !_isPickupFieldActive,
+                isSearching: _isSearchingDropoff,
+                onClear: () {
+                  dropoffController.clear();
+                  setState(() {
+                    _dropoffLocation = null;
+                    _dropoffPredictions = [];
+                  });
+                },
+                locationIcon: Icons.location_on,
+                showCheckmark: _dropoffLocation != null,
+              ),
+            ],
           ),
         ],
       ),
@@ -859,6 +880,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Widget _buildLocationInputField({
     required TextEditingController controller,
     required FocusNode focusNode,
+    required String label,
     required String hint,
     required bool isActive,
     required bool isSearching,
@@ -867,65 +889,137 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     required bool showCheckmark,
   }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final onSurface = theme.colorScheme.onSurface;
     final secondaryText =
         theme.textTheme.bodySmall?.color ?? onSurface.withOpacity(0.6);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => focusNode.requestFocus(),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Location icon
-          Icon(
-            locationIcon,
-            color: isActive ? theme.primaryColor : secondaryText,
-            size: 24,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? theme.primaryColor
+                  : theme.primaryColor.withOpacity(isDark ? 0.16 : 0.1),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: theme.primaryColor.withOpacity(0.28),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              locationIcon,
+              color: isActive ? Colors.white : theme.primaryColor,
+              size: 19,
+            ),
           ),
           const SizedBox(width: 12),
 
-          // Text field
           Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              style: TextStyle(
-                color: Theme.of(context).textTheme.bodyLarge!.color,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                hintText: hint,
-                hintStyle: TextStyle(
-                  color: secondaryText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              constraints: const BoxConstraints(minHeight: 58),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? theme.primaryColor.withOpacity(isDark ? 0.13 : 0.08)
+                    : onSurface.withOpacity(isDark ? 0.045 : 0.035),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isActive
+                      ? theme.primaryColor.withOpacity(0.55)
+                      : Colors.transparent,
+                  width: 1.2,
                 ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: isActive
+                                ? theme.primaryColor
+                                : secondaryText,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyLarge!.color,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            filled: false,
+                            fillColor: Colors.transparent,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.only(top: 4),
+                            hintText: hint,
+                            hintStyle: TextStyle(
+                              color: secondaryText,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (isSearching)
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.primaryColor,
+                      ),
+                    )
+                  else if (controller.text.isNotEmpty)
+                    IconButton(
+                      icon: Icon(Icons.close, color: secondaryText, size: 18),
+                      onPressed: onClear,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
+                    )
+                  else if (showCheckmark)
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 21,
+                    ),
+                ],
               ),
             ),
           ),
-
-          // Action buttons
-          if (isSearching)
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: theme.primaryColor,
-              ),
-            )
-          else if (showCheckmark && controller.text.isEmpty)
-            Icon(Icons.check_circle, color: Colors.green, size: 24)
-          else if (controller.text.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.close, color: secondaryText, size: 20),
-              onPressed: onClear,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-            ),
         ],
       ),
     );
@@ -1077,6 +1171,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ),
               const SizedBox(height: 12),
               _buildPopularDestination(
+                'Varendra University',
+                'Choto Bongram, Rajshahi',
+                Icons.school_outlined,
+              ),
+              const SizedBox(height: 8),
+              _buildPopularDestination(
                 'Rajshahi University of Engineering & Technology',
                 'Station Rd, Rajshahi',
                 Icons.school_outlined,
@@ -1169,6 +1269,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     // Hardcoded fallback coordinates for popular destinations
     final Map<String, Map<String, dynamic>> fallbackLocations = {
+      'Varendra University': {
+        'lat': 24.3639,
+        'lng': 88.6410,
+        'address': 'Varendra University, Choto Bongram, Rajshahi',
+        'name': 'Varendra University',
+      },
       'Rajshahi University of Engineering & Technology': {
         'lat': 24.3636,
         'lng': 88.6241,
@@ -1955,7 +2061,9 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                     border: Border.all(
                       color: isSelected
                           ? theme.primaryColor
-                          : theme.primaryColor.withOpacity(isDark ? 0.28 : 0.22),
+                          : theme.primaryColor.withOpacity(
+                              isDark ? 0.28 : 0.22,
+                            ),
                       width: isSelected ? 1.5 : 1,
                     ),
                     boxShadow: [
@@ -2044,9 +2152,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              isDark ? 0.28 : 0.08,
-            ),
+            color: Colors.black.withOpacity(isDark ? 0.28 : 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -2688,6 +2794,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         setState(() {
           _selectedAddress = address;
           _selectedName = address.split(',').first;
+          _searchController.text = _selectedName;
+          _predictions = [];
         });
         _updateMarker();
       }
@@ -2728,11 +2836,29 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     }
   }
 
+  Future<void> _moveCameraToSelectedLocation() async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(_selectedLat, _selectedLng), zoom: 17),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error moving map camera: $e');
+    }
+  }
+
   void _onSearchChanged(String query) {
     _debounceTimer?.cancel();
-    debugPrint('Search changed: "$query" (length: ${query.length})');
+    final trimmedQuery = query.trim();
+    debugPrint(
+      'Search changed: "$trimmedQuery" (length: ${trimmedQuery.length})',
+    );
 
-    if (query.isEmpty) {
+    if (trimmedQuery.length < 2) {
       setState(() {
         _predictions = [];
         _isSearching = false;
@@ -2740,14 +2866,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       return;
     }
 
-    if (query.length < 2) {
-      return;
-    }
-
     setState(() => _isSearching = true);
 
     _debounceTimer = Timer(const Duration(milliseconds: 400), () {
-      _searchPlaces(query);
+      _searchPlaces(trimmedQuery);
     });
   }
 
@@ -2761,6 +2883,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
       debugPrint('Got ${predictions.length} predictions');
       if (mounted) {
+        if (_searchController.text.trim() != query.trim()) return;
+
         setState(() {
           _predictions = predictions;
           _isSearching = false;
@@ -2792,6 +2916,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     final details = await _placesService.getPlaceDetails(
       prediction.placeId,
       sessionToken: _sessionToken,
+      fallbackQuery: prediction.description,
     );
 
     if (details != null && mounted) {
@@ -2807,6 +2932,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
       // Update marker on map
       _updateMarker();
+      _moveCameraToSelectedLocation();
 
       // New session token
       _sessionToken = const Uuid().v4();
@@ -2890,6 +3016,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
         // Update marker on map
         _updateMarker();
+        _moveCameraToSelectedLocation();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -3039,7 +3166,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                                   _searchController.clear();
                                   setState(() => _predictions = []);
                                 },
-                            )
+                              )
                             : null,
                         filled: true,
                         fillColor: Colors.transparent,

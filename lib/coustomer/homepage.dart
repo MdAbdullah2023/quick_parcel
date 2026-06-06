@@ -239,7 +239,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const LiveTrackingPage()),
+        MaterialPageRoute(
+          builder: (_) => LiveTrackingPage(trackingId: trackingNumber),
+        ),
       );
     } catch (e) {
       if (!mounted) return;

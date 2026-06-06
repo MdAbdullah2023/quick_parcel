@@ -34,7 +34,16 @@ class DriverLocationService {
 
       _isTracking = true;
 
-      // Set driver as available
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      await DatabaseMethods().updateDriverLocation(
+        driverId,
+        position.latitude,
+        position.longitude,
+      );
       await DatabaseMethods().updateDriverAvailability(driverId, true);
 
       // Start tracking location - update every 5 seconds

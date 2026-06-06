@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
+import 'package:quick_parcel/shared/order_chat_page.dart';
 
 class DriverAllOrdersPage extends StatefulWidget {
   const DriverAllOrdersPage({super.key});
@@ -51,8 +52,7 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
   ) {
     final activeDocs = docs.where((doc) {
       return _isDriverOrderStatus(doc.data()['Status']);
-    }).toList()
-      ..sort(_compareDocsByCreatedAtDesc);
+    }).toList()..sort(_compareDocsByCreatedAtDesc);
 
     final filter = _tabs[tabIndex].toLowerCase();
     if (filter == 'all') {
@@ -205,6 +205,49 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
         setState(() => _updatingOrderIds.remove(orderId));
       }
     }
+  }
+
+  Future<void> _openOrderChat(Map<String, dynamic> order) async {
+    final orderId = (order['OrderId'] ?? '').toString();
+    final driverId =
+        _driverId ?? await SharedpreferenceHelper().getUserId() ?? '';
+    final customerId = (order['UserId'] ?? order['CustomerId'] ?? '')
+        .toString();
+
+    if (orderId.isEmpty || driverId.isEmpty || customerId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer chat is not available yet')),
+      );
+      return;
+    }
+
+    final helper = SharedpreferenceHelper();
+    final savedName = await helper.getUserName();
+    final driverName = (savedName ?? order['DriverName'] ?? 'Driver')
+        .toString();
+    final customerName = _orderText(order, [
+      'SenderName',
+      'CustomerName',
+    ], fallback: 'Customer');
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderChatPage(
+          orderId: orderId,
+          customerId: customerId,
+          driverId: driverId,
+          customerName: customerName,
+          driverName: driverName,
+          currentUserId: driverId,
+          currentUserName: driverName,
+          currentUserRole: 'Driver',
+          primaryColor: _primary,
+        ),
+      ),
+    );
   }
 
   @override
@@ -447,6 +490,23 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
             ),
             const SizedBox(height: 10),
           ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _openOrderChat(order),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+              label: const Text('Chat with Customer'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _primary,
+                side: BorderSide(color: _primary.withOpacity(0.7)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           LayoutBuilder(
             builder: (context, constraints) {
               final buttonWidth = (constraints.maxWidth - 10) / 2;

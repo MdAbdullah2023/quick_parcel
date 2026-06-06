@@ -3,6 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class DatabaseMethods {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String accountChatId(String customerId, String driverId) {
+    final safeCustomerId = customerId.trim().replaceAll('/', '_');
+    final safeDriverId = driverId.trim().replaceAll('/', '_');
+    return '${safeCustomerId}_$safeDriverId';
+  }
+
   // add user details to Firestore
   Future<void> addUserDetail(
     Map<String, dynamic> userInfoMap,
@@ -376,10 +382,23 @@ class DatabaseMethods {
     bool isAvailable,
   ) async {
     try {
-      await _firestore.collection('drivers').doc(driverId).set({
+      final updateData = <String, dynamic>{
         'IsAvailable': isAvailable,
         'AvailabilityUpdatedAt': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
+      };
+
+      if (!isAvailable) {
+        updateData.addAll({
+          'CurrentLat': 0.0,
+          'CurrentLng': 0.0,
+          'LastLocationUpdate': '',
+        });
+      }
+
+      await _firestore
+          .collection('drivers')
+          .doc(driverId)
+          .set(updateData, SetOptions(merge: true));
     } catch (e) {
       print('Error updating driver availability: $e');
       // Don't rethrow - availability updates shouldn't crash the app
@@ -462,6 +481,125 @@ class DatabaseMethods {
     String orderId,
   ) {
     return _firestore.collection('Order').doc(orderId).snapshots();
+  }
+
+  Future<void> ensureOrderChat({
+    required String orderId,
+    required String customerId,
+    required String driverId,
+    required String customerName,
+    required String driverName,
+  }) async {
+    try {
+      final chatId = accountChatId(customerId, driverId);
+      final chatRef = _firestore.collection('OrderChats').doc(chatId);
+      final chatDoc = await chatRef.get();
+      final now = FieldValue.serverTimestamp();
+      final chatData = <String, dynamic>{
+        'ChatId': chatId,
+        'OrderId': orderId,
+        'OrderIds': FieldValue.arrayUnion([orderId]),
+        'CustomerId': customerId,
+        'DriverId': driverId,
+        'CustomerName': customerName,
+        'DriverName': driverName,
+        'UpdatedAt': now,
+      };
+
+      if (!chatDoc.exists) {
+        chatData.addAll({
+          'CreatedAt': now,
+          'LastMessage': '',
+          'LastMessageAt': now,
+          'LastSenderId': '',
+          'LastSenderRole': '',
+        });
+      }
+
+      await chatRef.set(chatData, SetOptions(merge: true));
+    } catch (e) {
+      print('Error ensuring order chat: $e');
+      rethrow;
+    }
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getOrderChatMessages(
+    String chatId,
+  ) {
+    return _firestore
+        .collection('OrderChats')
+        .doc(chatId)
+        .collection('Messages')
+        .orderBy('CreatedAt', descending: true)
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getDriverOrderChats(
+    String driverId,
+  ) {
+    return _firestore
+        .collection('OrderChats')
+        .where('DriverId', isEqualTo: driverId)
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getCustomerOrderChats(
+    String customerId,
+  ) {
+    return _firestore
+        .collection('OrderChats')
+        .where('CustomerId', isEqualTo: customerId)
+        .snapshots();
+  }
+
+  Future<void> sendOrderChatMessage({
+    required String orderId,
+    required String customerId,
+    required String driverId,
+    required String customerName,
+    required String driverName,
+    required String senderId,
+    required String senderName,
+    required String senderRole,
+    required String message,
+  }) async {
+    try {
+      final trimmedMessage = message.trim();
+      if (trimmedMessage.isEmpty) return;
+
+      final chatId = accountChatId(customerId, driverId);
+      final chatRef = _firestore.collection('OrderChats').doc(chatId);
+      final messageRef = chatRef.collection('Messages').doc();
+      final now = FieldValue.serverTimestamp();
+
+      final batch = _firestore.batch();
+      batch.set(chatRef, {
+        'ChatId': chatId,
+        'OrderId': orderId,
+        'OrderIds': FieldValue.arrayUnion([orderId]),
+        'CustomerId': customerId,
+        'DriverId': driverId,
+        'CustomerName': customerName,
+        'DriverName': driverName,
+        'LastMessage': trimmedMessage,
+        'LastMessageAt': now,
+        'LastSenderId': senderId,
+        'LastSenderRole': senderRole,
+        'UpdatedAt': now,
+      }, SetOptions(merge: true));
+      batch.set(messageRef, {
+        'Message': trimmedMessage,
+        'SenderId': senderId,
+        'SenderName': senderName,
+        'SenderRole': senderRole,
+        'CreatedAt': now,
+      });
+
+      await batch.commit();
+    } catch (e) {
+      print('Error sending order chat message: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateDeliveryStatus({

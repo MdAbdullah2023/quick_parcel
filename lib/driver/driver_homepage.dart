@@ -143,11 +143,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
 
       if (userId != null) {
+        if (!_locationService.isTracking) {
+          await DatabaseMethods().updateDriverAvailability(userId, false);
+        }
+
         final doc = await DatabaseMethods().getDriverDetail(userId);
         if (doc.exists && mounted) {
           setState(() {
             rating = doc.data()?['Rating'] ?? 5.0;
             totalDeliveries = doc.data()?['TotalDeliveries'] ?? 0;
+            _isLocationEnabled = _locationService.isTracking;
           });
         }
         await _loadActiveOrders();

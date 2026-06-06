@@ -5,7 +5,11 @@ import 'package:geolocator/geolocator.dart';
 
 class GooglePlacesService {
   static const String _apiKey = 'AIzaSyCTZlFTsXe-3_sVAT0hKt7Uq_DEu7Zzczg';
-  static const String _baseUrl = 'https://maps.googleapis.com/maps/api/place';
+  static const String _mapsHost = 'maps.googleapis.com';
+  static const String _placePath = '/maps/api/place';
+  static const double _defaultLat = 24.3636; // Rajshahi
+  static const double _defaultLng = 88.6241;
+  static const int _defaultSearchRadiusMeters = 50000;
 
   // Singleton pattern
   static final GooglePlacesService _instance = GooglePlacesService._internal();
@@ -35,79 +39,162 @@ class GooglePlacesService {
     String? sessionToken,
     Position? currentLocation,
   }) async {
-    if (query.isEmpty) return [];
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) return [];
 
     try {
-      String locationBias = '';
-      if (currentLocation != null) {
-        locationBias =
-            '&location=${currentLocation.latitude},${currentLocation.longitude}&radius=50000';
-      }
+      final biasLat = currentLocation?.latitude ?? _defaultLat;
+      final biasLng = currentLocation?.longitude ?? _defaultLng;
+      final params = <String, String>{
+        'input': trimmedQuery,
+        'key': _apiKey,
+        'components': 'country:bd',
+        'language': 'en',
+        'region': 'bd',
+        'location': '$biasLat,$biasLng',
+        'radius': _defaultSearchRadiusMeters.toString(),
+        'origin': '$biasLat,$biasLng',
+        if (sessionToken != null) 'sessiontoken': sessionToken,
+      };
 
-      final url = Uri.parse(
-        '$_baseUrl/autocomplete/json?input=${Uri.encodeComponent(query)}'
-        '&key=$_apiKey'
-        '&components=country:bd' // Bangladesh
-        '&types=geocode|establishment'
-        '$locationBias'
-        '${sessionToken != null ? '&sessiontoken=$sessionToken' : ''}',
-      );
+      final url = Uri.https(_mapsHost, '$_placePath/autocomplete/json', params);
 
       final response = await http.get(url);
-      print('Places autocomplete response: ${response.body}'); // DEBUG PRINT
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
         if (data['status'] == 'OK') {
           final predictions = data['predictions'] as List;
-          return predictions.map((p) => PlacePrediction.fromJson(p)).toList();
-        } else if (data['status'] == 'ZERO_RESULTS') {
-          return [];
+          final places = predictions
+              .map((p) => PlacePrediction.fromJson(p))
+              .where((p) => p.placeId.isNotEmpty)
+              .toList();
+          if (places.isNotEmpty) return places;
         } else if (data['status'] == 'REQUEST_DENIED') {
           print(
             'REQUEST_DENIED: ${data['error_message']} - Check billing/API key',
           );
-          return [];
-        } else {
+        } else if (data['status'] != 'ZERO_RESULTS') {
           print(
             'Places API Error: ${data['status']} - ${data['error_message'] ?? ''}',
           );
-          return [];
         }
       }
     } catch (e) {
       print('Error searching places: $e');
     }
-    return [];
+
+    return _searchPlacesWithGeocoding(trimmedQuery);
   }
 
   // Get place details by place ID
   Future<PlaceDetails?> getPlaceDetails(
     String placeId, {
     String? sessionToken,
+    String? fallbackQuery,
   }) async {
     try {
-      final url = Uri.parse(
-        '$_baseUrl/details/json?place_id=$placeId'
-        '&key=$_apiKey'
-        '&fields=formatted_address,geometry,name,place_id,address_components'
-        '${sessionToken != null ? '&sessiontoken=$sessionToken' : ''}',
-      );
+      if (placeId.isNotEmpty) {
+        final url = Uri.https(_mapsHost, '$_placePath/details/json', {
+          'place_id': placeId,
+          'key': _apiKey,
+          'fields':
+              'formatted_address,geometry,name,place_id,address_components',
+          'language': 'en',
+          if (sessionToken != null) 'sessiontoken': sessionToken,
+        });
 
-      final response = await http.get(url);
+        final response = await http.get(url);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
 
-        if (data['status'] == 'OK') {
-          return PlaceDetails.fromJson(data['result']);
+          if (data['status'] == 'OK') {
+            return PlaceDetails.fromJson(data['result']);
+          }
         }
+      }
+
+      final geocodedPlace = placeId.isNotEmpty
+          ? await _getPlaceDetailsFromGeocodingPlaceId(placeId)
+          : null;
+      if (geocodedPlace != null) return geocodedPlace;
+
+      if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
+        return geocodeAddress(fallbackQuery);
       }
     } catch (e) {
       print('Error getting place details: $e');
     }
     return null;
+  }
+
+  Future<List<PlacePrediction>> _searchPlacesWithGeocoding(String query) async {
+    try {
+      final url = Uri.https(_mapsHost, '/maps/api/geocode/json', {
+        'address': '$query, Bangladesh',
+        'key': _apiKey,
+        'components': 'country:BD',
+        'bounds':
+            '${_defaultLat - 0.5},${_defaultLng - 0.5}|${_defaultLat + 0.5},${_defaultLng + 0.5}',
+        'language': 'en',
+        'region': 'bd',
+      });
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'] is List) {
+          final seenPlaceIds = <String>{};
+          return (data['results'] as List)
+              .map((result) => PlacePrediction.fromGeocodingJson(result))
+              .where((prediction) {
+                final key = prediction.placeId.isNotEmpty
+                    ? prediction.placeId
+                    : prediction.description;
+                return key.isNotEmpty && seenPlaceIds.add(key);
+              })
+              .toList();
+        }
+      }
+    } catch (e) {
+      print('Error geocoding places: $e');
+    }
+    return [];
+  }
+
+  Future<PlaceDetails?> _getPlaceDetailsFromGeocodingPlaceId(
+    String placeId,
+  ) async {
+    try {
+      final url = Uri.https(_mapsHost, '/maps/api/geocode/json', {
+        'place_id': placeId,
+        'key': _apiKey,
+        'language': 'en',
+      });
+
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'] is List) {
+          final results = data['results'] as List;
+          if (results.isNotEmpty) {
+            return PlaceDetails.fromGeocodingJson(results.first);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error getting geocoding place details: $e');
+    }
+    return null;
+  }
+
+  Future<PlaceDetails?> geocodeAddress(String query) async {
+    final predictions = await _searchPlacesWithGeocoding(query);
+    if (predictions.isEmpty) return null;
+    return _getPlaceDetailsFromGeocodingPlaceId(predictions.first.placeId);
   }
 
   // Get current location with improved error handling
@@ -444,7 +531,26 @@ class PlacePrediction {
       description: json['description'] ?? '',
       mainText: structuredFormatting['main_text'] ?? json['description'] ?? '',
       secondaryText: structuredFormatting['secondary_text'] ?? '',
-      distanceMeters: json['distance_meters']?.toDouble(),
+      distanceMeters: (json['distance_meters'] as num?)?.toDouble(),
+    );
+  }
+
+  factory PlacePrediction.fromGeocodingJson(Map<String, dynamic> json) {
+    final formattedAddress = json['formatted_address'] ?? '';
+    final components = json['address_components'] as List? ?? [];
+    final mainText = components.isNotEmpty
+        ? components.first['long_name'] ?? formattedAddress
+        : formattedAddress;
+    final secondaryText = formattedAddress
+        .toString()
+        .replaceFirst(mainText.toString(), '')
+        .replaceFirst(RegExp(r'^,\s*'), '');
+
+    return PlacePrediction(
+      placeId: json['place_id'] ?? '',
+      description: formattedAddress,
+      mainText: mainText.toString(),
+      secondaryText: secondaryText,
     );
   }
 }
@@ -475,6 +581,27 @@ class PlaceDetails {
       placeId: json['place_id'] ?? '',
       name: json['name'] ?? '',
       formattedAddress: json['formatted_address'] ?? '',
+      lat: (location['lat'] ?? 0).toDouble(),
+      lng: (location['lng'] ?? 0).toDouble(),
+      addressComponents: components
+          .map((c) => AddressComponent.fromJson(c))
+          .toList(),
+    );
+  }
+
+  factory PlaceDetails.fromGeocodingJson(Map<String, dynamic> json) {
+    final geometry = json['geometry'] ?? {};
+    final location = geometry['location'] ?? {};
+    final components = json['address_components'] as List? ?? [];
+    final formattedAddress = json['formatted_address'] ?? '';
+    final name = components.isNotEmpty
+        ? components.first['long_name'] ?? formattedAddress
+        : formattedAddress;
+
+    return PlaceDetails(
+      placeId: json['place_id'] ?? '',
+      name: name.toString(),
+      formattedAddress: formattedAddress,
       lat: (location['lat'] ?? 0).toDouble(),
       lng: (location['lng'] ?? 0).toDouble(),
       addressComponents: components
