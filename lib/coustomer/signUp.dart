@@ -301,7 +301,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: Column(
         children: [
           const SizedBox(height: 50),
-          Image.asset("images/signup.png"),
+          Image.asset("images/Coustomer_signup.png", height: 200, 
+          fit: BoxFit.contain),
 
           Container(
             alignment: Alignment.centerLeft,
@@ -310,7 +311,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
+                
                 const Text(
                   'Sign up',
                   style: TextStyle(
@@ -319,7 +320,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                
                 const Text(
                   'Join Quick Parcel',
                   style: TextStyle(
@@ -331,15 +332,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Text(
                   'Faster deliveries start here',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white,
                     fontSize: 16,
-                    fontWeight: FontWeight.w300,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 15),
           Expanded(
             child: Container(
               width: double.infinity,

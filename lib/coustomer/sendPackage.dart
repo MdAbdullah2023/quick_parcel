@@ -2226,28 +2226,6 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         theme.textTheme.bodyMedium?.color ??
         theme.colorScheme.onSurface.withOpacity(0.7);
 
-    // Calculation breakdown
-    String calculationText = '';
-    if (_distanceInfo != null && !_isLoadingDistance) {
-      final distanceKm = (_distanceInfo!.distanceValue / 1000).toStringAsFixed(
-        2,
-      );
-      double sizeMultiplier = 1.0;
-      switch (selectedPackageSize.toLowerCase()) {
-        case 'small':
-          sizeMultiplier = 1.0;
-          break;
-        case 'medium':
-          sizeMultiplier = 1.5;
-          break;
-        case 'large':
-          sizeMultiplier = 2.0;
-          break;
-      }
-      calculationText =
-          'Calculation: 50 + ($distanceKm km × 20 × $sizeMultiplier) = ৳${_estimatedPrice.toStringAsFixed(0)}';
-    }
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2333,17 +2311,6 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                       ),
                     ],
                   ),
-                  if (calculationText.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      calculationText,
-                      style: TextStyle(
-                        color: secondaryText,
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

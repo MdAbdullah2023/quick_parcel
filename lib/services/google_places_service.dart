@@ -85,7 +85,10 @@ class GooglePlacesService {
       print('Error searching places: $e');
     }
 
-    return _searchPlacesWithGeocoding(trimmedQuery);
+    final geocodingResults = await _searchPlacesWithGeocoding(trimmedQuery);
+    if (geocodingResults.isNotEmpty) return geocodingResults;
+
+    return _searchPlacesWithOpenStreetMap(trimmedQuery);
   }
 
   // Get place details by place ID
@@ -95,6 +98,9 @@ class GooglePlacesService {
     String? fallbackQuery,
   }) async {
     try {
+      final osmDetails = _getOpenStreetMapDetails(placeId, fallbackQuery);
+      if (osmDetails != null) return osmDetails;
+
       if (placeId.isNotEmpty) {
         final url = Uri.https(_mapsHost, '$_placePath/details/json', {
           'place_id': placeId,
@@ -163,6 +169,78 @@ class GooglePlacesService {
       print('Error geocoding places: $e');
     }
     return [];
+  }
+
+  Future<List<PlacePrediction>> _searchPlacesWithOpenStreetMap(
+    String query,
+  ) async {
+    try {
+      final url = Uri.https('nominatim.openstreetmap.org', '/search', {
+        'q': query,
+        'format': 'jsonv2',
+        'addressdetails': '1',
+        'limit': '8',
+        'countrycodes': 'bd',
+      });
+
+      final response = await http.get(
+        url,
+        headers: const {
+          'User-Agent': 'quick_parcel_flutter_app/1.0',
+          'Accept-Language': 'en',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) {
+          final seen = <String>{};
+          return data
+              .whereType<Map<String, dynamic>>()
+              .map((result) => PlacePrediction.fromOpenStreetMapJson(result))
+              .where((prediction) {
+                final key = prediction.placeId.isNotEmpty
+                    ? prediction.placeId
+                    : prediction.description;
+                return key.isNotEmpty && seen.add(key);
+              })
+              .toList();
+        }
+      } else {
+        print('OpenStreetMap search error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error searching OpenStreetMap places: $e');
+    }
+    return [];
+  }
+
+  PlaceDetails? _getOpenStreetMapDetails(
+    String placeId,
+    String? fallbackQuery,
+  ) {
+    if (!placeId.startsWith('osm:')) return null;
+
+    final parts = placeId.substring(4).split(',');
+    if (parts.length != 2) return null;
+
+    final lat = double.tryParse(parts[0]);
+    final lng = double.tryParse(parts[1]);
+    if (lat == null || lng == null) return null;
+
+    final address = fallbackQuery?.trim();
+    final formattedAddress = address != null && address.isNotEmpty
+        ? address
+        : '$lat, $lng';
+
+    return PlaceDetails(
+      placeId: placeId,
+      name: formattedAddress.split(',').first,
+      formattedAddress: formattedAddress,
+      lat: lat,
+      lng: lng,
+      addressComponents: const [],
+    );
   }
 
   Future<PlaceDetails?> _getPlaceDetailsFromGeocodingPlaceId(
@@ -515,6 +593,8 @@ class PlacePrediction {
   final String mainText;
   final String secondaryText;
   final double? distanceMeters;
+  final double? lat;
+  final double? lng;
 
   PlacePrediction({
     required this.placeId,
@@ -522,6 +602,8 @@ class PlacePrediction {
     required this.mainText,
     required this.secondaryText,
     this.distanceMeters,
+    this.lat,
+    this.lng,
   });
 
   factory PlacePrediction.fromJson(Map<String, dynamic> json) {
@@ -551,6 +633,33 @@ class PlacePrediction {
       description: formattedAddress,
       mainText: mainText.toString(),
       secondaryText: secondaryText,
+    );
+  }
+
+  factory PlacePrediction.fromOpenStreetMapJson(Map<String, dynamic> json) {
+    final displayName = (json['display_name'] ?? '').toString();
+    final lat = double.tryParse((json['lat'] ?? '').toString());
+    final lng = double.tryParse((json['lon'] ?? '').toString());
+    final address = json['address'] is Map ? json['address'] as Map : const {};
+    final name = (json['name'] ??
+            address['road'] ??
+            address['suburb'] ??
+            address['village'] ??
+            address['town'] ??
+            address['city'] ??
+            displayName.split(',').first)
+        .toString();
+    final secondaryText = displayName
+        .replaceFirst(name, '')
+        .replaceFirst(RegExp(r'^,\s*'), '');
+
+    return PlacePrediction(
+      placeId: lat != null && lng != null ? 'osm:$lat,$lng' : '',
+      description: displayName,
+      mainText: name,
+      secondaryText: secondaryText,
+      lat: lat,
+      lng: lng,
     );
   }
 }

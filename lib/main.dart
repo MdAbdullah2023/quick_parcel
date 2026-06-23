@@ -7,6 +7,7 @@ import 'package:quick_parcel/slaph_screen.dart';
 import 'package:quick_parcel/coustomer/login.dart';
 import 'package:quick_parcel/coustomer/signup.dart';
 import 'package:quick_parcel/services/app_theme.dart';
+import 'package:quick_parcel/admin/admin_login.dart';
 
 // Driver app imports (commented out)
 // import 'package:quick_parcel/driver/driver_login.dart';
@@ -44,6 +45,7 @@ class _MyAppState extends State<MyApp> {
         // Customer app routes
         '/customer-login': (context) => const LoginScreen(),
         '/customer-signup': (context) => const SignUpScreen(),
+        '/admin-login': (context) => const AdminLoginScreen(),
 
         // Driver app routes (commented out)
         // '/driver-login': (context) => const DriverLoginScreen(),

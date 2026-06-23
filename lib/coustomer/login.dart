@@ -174,9 +174,9 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           SizedBox(height: 30),
           SizedBox(
-            height: 200,
+            height: 250,
             child: Image.asset(
-              "images/51374-removebg-preview.png",
+              "images/coustomer_login.png",
               fit: BoxFit.contain,
             ),
           ),
@@ -202,14 +202,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.w400,
-                  ),
-                ),
-                Text(
-                  'Your Parcel are waiting',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w300,
                   ),
                 ),
               ],

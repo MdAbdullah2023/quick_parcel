@@ -186,7 +186,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
           SizedBox(
             height: 200,
             child: Image.asset(
-              "images/51374-removebg-preview.png",
+              "images/delivery-bike.png",
               fit: BoxFit.contain,
             ),
           ),
@@ -243,7 +243,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Email Field
+                      //r Email Field
                       CustomTextField(
                         label: 'Email',
                         hint: 'Enter your email',

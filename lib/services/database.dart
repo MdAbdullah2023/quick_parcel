@@ -3,6 +3,93 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class DatabaseMethods {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  Future<Map<String, dynamic>?> findAdminProfile({
+    required String firebaseUid,
+    required String email,
+  }) async {
+    final directAdmin = await _firestore
+        .collection('admins')
+        .doc(firebaseUid)
+        .get();
+    if (directAdmin.exists) {
+      return {'Id': directAdmin.id, ...?directAdmin.data()};
+    }
+
+    final adminByUid = await _firestore
+        .collection('admins')
+        .where('FirebaseUid', isEqualTo: firebaseUid)
+        .limit(1)
+        .get();
+    if (adminByUid.docs.isNotEmpty) {
+      final doc = adminByUid.docs.first;
+      return {'Id': doc.id, ...doc.data()};
+    }
+
+    if (email.trim().isNotEmpty) {
+      final adminByEmail = await _firestore
+          .collection('admins')
+          .where('Email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+      if (adminByEmail.docs.isNotEmpty) {
+        final doc = adminByEmail.docs.first;
+        return {'Id': doc.id, ...doc.data()};
+      }
+    }
+
+    final userDoc = await _firestore.collection('users').doc(firebaseUid).get();
+    final userData = userDoc.data();
+    if (userData != null &&
+        (userData['UserType'] ?? '').toString().toLowerCase() == 'admin') {
+      return {'Id': userDoc.id, ...userData};
+    }
+    return null;
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAllUsersStream() {
+    return _firestore.collection('users').snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAllDriversStream() {
+    return _firestore.collection('drivers').snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAllOrdersStream() {
+    return _firestore.collection('Order').snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getPendingOrdersStream() {
+    return _firestore
+        .collection('Order')
+        .where('Status', isEqualTo: 'Pending')
+        .snapshots();
+  }
+
+  Future<void> updateAccountStatus({
+    required String collection,
+    required String id,
+    required bool isActive,
+  }) async {
+    if (collection != 'users' && collection != 'drivers') {
+      throw ArgumentError.value(collection, 'collection');
+    }
+    await _firestore.collection(collection).doc(id).set({
+      'IsActive': isActive,
+      'AccountStatus': isActive ? 'Active' : 'Suspended',
+      'AccountStatusUpdatedAt': DateTime.now().toIso8601String(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> updateDriverVerification(
+    String driverId,
+    bool isVerified,
+  ) async {
+    await _firestore.collection('drivers').doc(driverId).set({
+      'IsVerified': isVerified,
+      'VerificationUpdatedAt': DateTime.now().toIso8601String(),
+    }, SetOptions(merge: true));
+  }
+
   String accountChatId(String customerId, String driverId) {
     final safeCustomerId = customerId.trim().replaceAll('/', '_');
     final safeDriverId = driverId.trim().replaceAll('/', '_');
@@ -146,6 +233,14 @@ class DatabaseMethods {
       print('Error fetching driver data: $e');
       rethrow;
     }
+  }
+
+  Stream<bool> getDriverVerificationStream(String driverId) {
+    return _firestore.collection('drivers').doc(driverId).snapshots().map((
+      document,
+    ) {
+      return document.data()?['IsVerified'] == true;
+    });
   }
 
   // Get driver by Firebase UID

@@ -22,7 +22,7 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
   String? _driverId;
   bool _loadingDriver = true;
 
-  final List<String> _tabs = ['All', 'Assigned', 'In Transit', 'Delivered'];
+  final List<String> _tabs = ['All', 'In Transit', 'Delivered'];
 
   @override
   void initState() {
@@ -64,10 +64,8 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
 
     return activeDocs.where((doc) {
       final status = (doc.data()['Status'] ?? '').toString().toLowerCase();
-      if (filter == 'assigned') {
-        return status == 'assigned' ||
-            status == 'accepted' ||
-            status == 'confirmed';
+      if (filter == 'in transit') {
+        return status == 'received' || status == 'in transit';
       }
       return status == filter;
     }).toList();
@@ -75,7 +73,6 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
 
   bool _isDriverOrderStatus(dynamic status) {
     switch ((status ?? '').toString().toLowerCase()) {
-      case 'assigned':
       case 'accepted':
       case 'confirmed':
       case 'received':
@@ -85,6 +82,112 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
       default:
         return false;
     }
+  }
+
+  IconData _tabIcon(String tab) {
+    switch (tab.toLowerCase()) {
+      case 'in transit':
+        return Icons.local_shipping_outlined;
+      case 'delivered':
+        return Icons.done_all_rounded;
+      default:
+        return Icons.receipt_long_outlined;
+    }
+  }
+
+  Widget _orderTabs() {
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final selectedColor = isDark
+            ? Color.lerp(theme.colorScheme.surface, _primary, 0.18)!
+            : Colors.white;
+        final selectedTextColor = isDark
+            ? theme.colorScheme.onSurface
+            : _primary;
+        final selectedIconColor = isDark ? const Color(0xFFFFB15D) : _primary;
+        final unselectedColor = isDark
+            ? theme.colorScheme.onSurface.withOpacity(0.66)
+            : Colors.white70;
+
+        return Container(
+          height: 48,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.black.withOpacity(0.14)
+                : Colors.white.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.16)
+                  : Colors.white.withOpacity(0.22),
+            ),
+          ),
+          child: Row(
+            children: List.generate(_tabs.length, (index) {
+              final tab = _tabs[index];
+              final selected = _tabController.index == index;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _tabController.animateTo(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? selectedColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(
+                                  isDark ? 0.18 : 0.10,
+                                ),
+                                blurRadius: isDark ? 8 : 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _tabIcon(tab),
+                          size: 17,
+                          color: selected ? selectedIconColor : unselectedColor,
+                        ),
+                        const SizedBox(width: 7),
+                        Flexible(
+                          child: Text(
+                            tab,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: selected
+                                  ? selectedTextColor
+                                  : unselectedColor,
+                              fontSize: 13,
+                              fontWeight: selected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
+    );
   }
 
   int _compareDocsByCreatedAtDesc(
@@ -134,11 +237,7 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
 
   bool _canMarkReceived(String status) {
     final value = status.toLowerCase();
-    return value == 'accepted' || value == 'confirmed';
-  }
-
-  bool _canMarkInTransit(String status) {
-    return status.toLowerCase() == 'received';
+    return value == 'accepted' || value == 'confirmed' || value == 'received';
   }
 
   bool _canMarkDelivered(String status) {
@@ -340,7 +439,7 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
           child: Column(
             children: [
               Row(
@@ -370,21 +469,8 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorColor: Colors.white,
-                indicatorWeight: 3,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-                tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-              ),
+              const SizedBox(height: 16),
+              _orderTabs(),
             ],
           ),
         ),
@@ -394,7 +480,7 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
 
   Widget _orderCard(Map<String, dynamic> order) {
     final orderId = (order['OrderId'] ?? '').toString();
-    final status = _orderText(order, ['Status'], fallback: 'Assigned');
+    final status = _orderText(order, ['Status'], fallback: 'Received');
     final pickup = _orderText(order, ['PickupAddress', 'PickupLocation']);
     final dropoff = _orderText(order, ['DropoffAddress', 'DeliveryLocation']);
     final customer = _orderText(order, ['SenderName'], fallback: 'Customer');
@@ -490,47 +576,19 @@ class _DriverAllOrdersPageState extends State<DriverAllOrdersPage>
             ),
             const SizedBox(height: 10),
           ],
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _openOrderChat(order),
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-              label: const Text('Chat with Customer'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _primary,
-                side: BorderSide(color: _primary.withOpacity(0.7)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
           LayoutBuilder(
             builder: (context, constraints) {
-              final buttonWidth = (constraints.maxWidth - 10) / 2;
               return Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
                   _statusActionButton(
-                    width: buttonWidth,
+                    width: constraints.maxWidth,
                     updating: updating,
                     enabled: _canMarkReceived(status),
                     label: 'Received',
                     icon: Icons.inventory_2_outlined,
                     color: const Color(0xFF0D9488),
-                    outlined: true,
-                    onPressed: () => _updateStatus(orderId, 'Received'),
-                  ),
-                  _statusActionButton(
-                    width: buttonWidth,
-                    updating: updating,
-                    enabled: _canMarkInTransit(status),
-                    label: 'In Transit',
-                    icon: Icons.local_shipping_outlined,
-                    color: _primary,
                     outlined: true,
                     onPressed: () => _updateStatus(orderId, 'In Transit'),
                   ),

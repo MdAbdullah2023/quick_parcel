@@ -188,8 +188,12 @@ class _DriverSignUpScreenState extends State<DriverSignUpScreen> {
       backgroundColor: _primary,
       body: Column(
         children: [
-          const SizedBox(height: 50),
-          Image.asset("images/signup.png"),
+          const SizedBox(height: 10),
+          Image.asset(
+            "images/fast-delivery.png",
+            height: 190,
+            fit: BoxFit.contain,
+          ),
 
           Container(
             alignment: Alignment.centerLeft,
@@ -198,7 +202,7 @@ class _DriverSignUpScreenState extends State<DriverSignUpScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
+               
                 const Text(
                   'Driver Sign up',
                   style: TextStyle(
@@ -207,7 +211,7 @@ class _DriverSignUpScreenState extends State<DriverSignUpScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                
                 const Text(
                   'Join Quick Parcel',
                   style: TextStyle(
@@ -227,7 +231,7 @@ class _DriverSignUpScreenState extends State<DriverSignUpScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 8),
           Expanded(
             child: Container(
               width: double.infinity,

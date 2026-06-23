@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,6 +39,13 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
   late GoogleMapController mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  BitmapDescriptor? _pickupMarkerIcon;
+  BitmapDescriptor? _dropoffMarkerIcon;
+  BitmapDescriptor? _driverMarkerIcon;
+  Brightness? _markerIconBrightness;
+  bool _loadingMarkerIcons = false;
+  bool _mapReady = false;
+  bool _driverSheetOpen = false;
   bool _isAssigning = false;
   Map<String, dynamic>? _selectedDriver;
 
@@ -66,6 +76,151 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
     super.initState();
   }
 
+  LatLng get _pickupLatLng => LatLng(
+    double.tryParse(widget.pickupLat) ?? 0.0,
+    double.tryParse(widget.pickupLng) ?? 0.0,
+  );
+
+  LatLng get _dropoffLatLng => LatLng(
+    double.tryParse(widget.dropoffLat) ?? 0.0,
+    double.tryParse(widget.dropoffLng) ?? 0.0,
+  );
+
+  void _ensureMarkerIcons(Brightness brightness) {
+    if (_markerIconBrightness == brightness &&
+        _pickupMarkerIcon != null &&
+        _dropoffMarkerIcon != null &&
+        _driverMarkerIcon != null) {
+      return;
+    }
+    if (_loadingMarkerIcons) return;
+
+    _loadingMarkerIcons = true;
+    final isDark = brightness == Brightness.dark;
+
+    Future.wait([
+      _createLabeledMarker(
+        label: 'Pickup',
+        color: const Color(0xFF23C55E),
+        icon: Icons.my_location_rounded,
+        isDark: isDark,
+      ),
+      _createLabeledMarker(
+        label: 'Dropoff',
+        color: const Color(0xFFEF4444),
+        icon: Icons.flag_rounded,
+        isDark: isDark,
+      ),
+      _createLabeledMarker(
+        label: 'Driver',
+        color: const Color(0xFF22C7D8),
+        icon: Icons.delivery_dining_rounded,
+        isDark: isDark,
+      ),
+    ]).then((icons) {
+      if (!mounted) return;
+      setState(() {
+        _pickupMarkerIcon = icons[0];
+        _dropoffMarkerIcon = icons[1];
+        _driverMarkerIcon = icons[2];
+        _markerIconBrightness = brightness;
+        _loadingMarkerIcons = false;
+      });
+    });
+  }
+
+  Future<BitmapDescriptor> _createLabeledMarker({
+    required String label,
+    required Color color,
+    required IconData icon,
+    required bool isDark,
+  }) async {
+    const double width = 220;
+    const double height = 122;
+    const double centerX = width / 2;
+    const double labelHeight = 42;
+    const double labelTop = 6;
+    const double pinRadius = 18;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(isDark ? 0.40 : 0.18)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    final labelRect = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(38, labelTop, width - 76, labelHeight),
+      const Radius.circular(18),
+    );
+    canvas.drawRRect(labelRect.shift(const Offset(0, 3)), shadowPaint);
+
+    final labelPaint = Paint()
+      ..color = isDark ? const Color(0xFF162326) : Colors.white;
+    canvas.drawRRect(labelRect, labelPaint);
+    canvas.drawRRect(
+      labelRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = color.withOpacity(isDark ? 0.55 : 0.28),
+    );
+
+    final pointerPath = Path()
+      ..moveTo(centerX - 9, labelTop + labelHeight - 1)
+      ..lineTo(centerX + 9, labelTop + labelHeight - 1)
+      ..lineTo(centerX, labelTop + labelHeight + 13)
+      ..close();
+    canvas.drawPath(pointerPath, labelPaint);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: isDark ? Colors.white : const Color(0xFF132D34),
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: width - 92);
+    textPainter.paint(
+      canvas,
+      Offset(centerX - textPainter.width / 2, labelTop + 11),
+    );
+
+    final pinCenter = Offset(centerX, 86);
+    canvas.drawCircle(pinCenter.translate(0, 3), pinRadius + 4, shadowPaint);
+    canvas.drawCircle(pinCenter, pinRadius + 5, Paint()..color = Colors.white);
+    canvas.drawCircle(pinCenter, pinRadius, Paint()..color = color);
+
+    final iconPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: 22,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    iconPainter.paint(
+      canvas,
+      Offset(
+        pinCenter.dx - iconPainter.width / 2,
+        pinCenter.dy - iconPainter.height / 2,
+      ),
+    );
+
+    final image = await recorder.endRecording().toImage(
+      width.toInt(),
+      height.toInt(),
+    );
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
   Set<Marker> _buildDriverMarkers(List<Map<String, dynamic>> drivers) {
     Set<Marker> markers = {};
 
@@ -73,12 +228,13 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
     markers.add(
       Marker(
         markerId: const MarkerId('pickup'),
-        position: LatLng(
-          double.parse(widget.pickupLat),
-          double.parse(widget.pickupLng),
-        ),
-        infoWindow: const InfoWindow(title: 'Pickup Location'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        position: _pickupLatLng,
+        infoWindow: const InfoWindow(title: 'Pickup'),
+        icon:
+            _pickupMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        anchor: const Offset(0.5, 0.88),
+        zIndex: 3,
       ),
     );
 
@@ -86,12 +242,13 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
     markers.add(
       Marker(
         markerId: const MarkerId('dropoff'),
-        position: LatLng(
-          double.parse(widget.dropoffLat),
-          double.parse(widget.dropoffLng),
-        ),
-        infoWindow: const InfoWindow(title: 'Dropoff Location'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        position: _dropoffLatLng,
+        infoWindow: const InfoWindow(title: 'Dropoff'),
+        icon:
+            _dropoffMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        anchor: const Offset(0.5, 0.88),
+        zIndex: 3,
       ),
     );
 
@@ -108,12 +265,16 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
             markerId: MarkerId('driver_${driver['Id']}'),
             position: LatLng(lat, lng),
             infoWindow: InfoWindow(
-              title: driver['Name'] ?? 'Driver',
-              snippet: 'Rating: ${driver['Rating'] ?? 5.0}',
+              title: 'Driver',
+              snippet: driver['Name'] ?? 'Driver',
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueBlue,
-            ),
+            icon:
+                _driverMarkerIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueBlue,
+                ),
+            anchor: const Offset(0.5, 0.88),
+            zIndex: 4,
             onTap: () => _selectDriver(driver),
           ),
         );
@@ -121,6 +282,21 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
     }
 
     return markers;
+  }
+
+  Set<Polyline> _buildRoutePolylines() {
+    return {
+      Polyline(
+        polylineId: const PolylineId('pickup_dropoff_route'),
+        points: [_pickupLatLng, _dropoffLatLng],
+        color: const Color(0xFF2F80ED),
+        width: 6,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+        geodesic: true,
+      ),
+    };
   }
 
   void _selectDriver(Map<String, dynamic> driver) {
@@ -145,6 +321,7 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
   }
 
   void _showDriverDetailsBottomSheet(Map<String, dynamic> driver) {
+    _driverSheetOpen = true;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -296,7 +473,23 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      _driverSheetOpen = false;
+    });
+  }
+
+  void _dismissDriverProfile() {
+    if (!mounted) return;
+
+    if (_driverSheetOpen) {
+      Navigator.of(context).maybePop();
+      _driverSheetOpen = false;
+    }
+
+    setState(() {
+      _selectedDriver = null;
+      _isAssigning = false;
+    });
   }
 
   Widget _buildDetailRowNew(String label, String value, IconData icon) {
@@ -576,6 +769,7 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
           }
         } else if (mounted) {
           // Driver declined or timeout
+          _dismissDriverProfile();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -603,8 +797,6 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
               duration: const Duration(seconds: 3),
             ),
           );
-
-          setState(() => _isAssigning = false);
         }
       }
     } catch (e) {
@@ -622,11 +814,12 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
+    _mapReady = true;
     _fitMarkersBounds();
   }
 
   Future<void> _fitMarkersBounds() async {
-    if (_markers.isEmpty) return;
+    if (!_mapReady || _markers.isEmpty) return;
 
     double minLat = _markers.first.position.latitude;
     double maxLat = _markers.first.position.latitude;
@@ -657,6 +850,7 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
     final surface = theme.colorScheme.surface;
     final textColor = theme.colorScheme.onSurface;
     final secondaryText = theme.textTheme.bodySmall?.color;
+    _ensureMarkerIcons(theme.brightness);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -804,6 +998,13 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
           }
 
           final currentMarkers = _buildDriverMarkers(drivers);
+          final currentPolylines = _buildRoutePolylines();
+          _markers
+            ..clear()
+            ..addAll(currentMarkers);
+          _polylines
+            ..clear()
+            ..addAll(currentPolylines);
 
           return Stack(
             children: [
@@ -812,10 +1013,7 @@ class _FindDriverScreenState extends State<FindDriverScreen> {
                 onMapCreated: _onMapCreated,
                 style: isDark ? _darkMapStyle : null,
                 initialCameraPosition: CameraPosition(
-                  target: LatLng(
-                    double.parse(widget.pickupLat),
-                    double.parse(widget.pickupLng),
-                  ),
+                  target: _pickupLatLng,
                   zoom: 14.0,
                 ),
                 markers: currentMarkers,

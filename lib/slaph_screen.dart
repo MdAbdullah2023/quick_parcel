@@ -5,6 +5,7 @@ import 'package:quick_parcel/coustomer/bottomnav.dart';
 import 'package:quick_parcel/driver/driver_bottomnav.dart';
 import 'package:quick_parcel/introPage.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
+import 'package:quick_parcel/admin/admin_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,7 +31,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Widget nextPage = const Intropage();
     if (user != null && userId != null && userId.isNotEmpty) {
-      if (userType == 'Driver') {
+      if (userType == 'Admin') {
+        nextPage = const AdminShell();
+      } else if (userType == 'Driver') {
         nextPage = const DriverBottomNav();
       } else {
         nextPage = const BottomNav();

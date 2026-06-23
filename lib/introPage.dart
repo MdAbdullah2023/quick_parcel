@@ -4,6 +4,7 @@ import 'package:quick_parcel/coustomer/login.dart';
 import 'package:quick_parcel/coustomer/sendPackage.dart';
 import 'package:quick_parcel/driver/driver_login.dart';
 import 'package:quick_parcel/services/widget_support.dart';
+import 'package:quick_parcel/admin/admin_login.dart';
 
 class Intropage extends StatefulWidget {
   const Intropage({super.key});
@@ -27,6 +28,13 @@ class _IntropageState extends State<Intropage> {
     );
   }
 
+  void _navigateToAdminLogin(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AdminLoginScreen()),
+    );
+  }
+
   void _showRoleSelectionDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -38,53 +46,54 @@ class _IntropageState extends State<Intropage> {
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               'Are you here to send packages or deliver them?',
               style: AppWidget.LightTextFieldStyle(14.0),
             ),
+            const SizedBox(height: 22),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _navigateToLogin(context);
+              },
+              icon: const Icon(Icons.person_outline_rounded),
+              label: const Text('Continue as Customer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D7D8F),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _navigateToDriverLogin(context);
+              },
+              icon: const Icon(Icons.delivery_dining_rounded),
+              label: const Text('Continue as Driver'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF57C00),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _navigateToAdminLogin(context);
+              },
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+              label: const Text('Continue as Admin'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0B7285),
+                side: const BorderSide(color: Color(0xFF0B7285)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateToLogin(context);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D7D8F),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Customer',
-                style: AppWidget.boldTextFieldStyle(
-                  14.0,
-                ).copyWith(color: Colors.white),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateToDriverLogin(context);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF57C00),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Driver',
-                style: AppWidget.boldTextFieldStyle(
-                  14.0,
-                ).copyWith(color: Colors.white),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

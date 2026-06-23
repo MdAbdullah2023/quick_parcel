@@ -22,13 +22,7 @@ class _MyPackagesPageState extends State<MyPackagesPage>
   bool _loadingUser = true;
   late TabController _tabController;
 
-  final List<String> _tabs = [
-    'All',
-    'Pending',
-    'In Transit',
-    'Delivered',
-    'Cancelled',
-  ];
+  final List<String> _tabs = ['All', 'Delivered'];
 
   @override
   void initState() {
@@ -175,6 +169,112 @@ class _MyPackagesPageState extends State<MyPackagesPage>
     }).toList();
   }
 
+  IconData _tabIcon(String tab) {
+    switch (tab.toLowerCase()) {
+      case 'delivered':
+        return Icons.done_all_rounded;
+      default:
+        return Icons.inventory_2_outlined;
+    }
+  }
+
+  Widget _packageTabs() {
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final selectedColor = isDark
+            ? Color.lerp(theme.colorScheme.surface, theme.primaryColor, 0.20)!
+            : Colors.white;
+        final selectedTextColor = isDark
+            ? theme.colorScheme.onSurface
+            : _primary;
+        final selectedIconColor = isDark
+            ? theme.colorScheme.secondary
+            : _primary;
+        final unselectedColor = isDark
+            ? theme.colorScheme.onSurface.withOpacity(0.64)
+            : Colors.white70;
+
+        return Container(
+          height: 48,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.black.withOpacity(0.16)
+                : Colors.white.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.16)
+                  : Colors.white.withOpacity(0.22),
+            ),
+          ),
+          child: Row(
+            children: List.generate(_tabs.length, (index) {
+              final tab = _tabs[index];
+              final selected = _tabController.index == index;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _tabController.animateTo(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? selectedColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(
+                                  isDark ? 0.18 : 0.10,
+                                ),
+                                blurRadius: isDark ? 8 : 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _tabIcon(tab),
+                          size: 17,
+                          color: selected ? selectedIconColor : unselectedColor,
+                        ),
+                        const SizedBox(width: 7),
+                        Flexible(
+                          child: Text(
+                            tab,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: selected
+                                  ? selectedTextColor
+                                  : unselectedColor,
+                              fontSize: 13,
+                              fontWeight: selected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
   //  build
 
   @override
@@ -228,49 +328,10 @@ class _MyPackagesPageState extends State<MyPackagesPage>
                             ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Live',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Tab bar
-                    TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      indicatorColor: Colors.white,
-                      indicatorWeight: 3,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white70,
-                      labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        letterSpacing: 0.2,
-                      ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                      padding: EdgeInsets.zero,
-                      tabs: _tabs.map((t) => Tab(text: t)).toList(),
-                    ),
+                    _packageTabs(),
                   ],
                 ),
               ),

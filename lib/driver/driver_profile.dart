@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:quick_parcel/driver/driver_login.dart';
+import 'package:quick_parcel/driver/driver_verified_badge.dart';
 import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
@@ -437,14 +438,23 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                         const SizedBox(height: 18),
                         // Driver name
                         Center(
-                          child: Text(
-                            _name.isNotEmpty ? _name : 'Driver',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              Text(
+                                _name.isNotEmpty ? _name : 'Driver',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              DriverVerifiedBadge(driverId: _driverId),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 8),

@@ -4,6 +4,7 @@ import 'package:quick_parcel/services/database.dart';
 import 'package:quick_parcel/services/shared_pref.dart';
 import 'package:quick_parcel/services/widget_support.dart';
 import 'package:quick_parcel/services/driver_location_service.dart';
+import 'package:quick_parcel/driver/driver_verified_badge.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -341,7 +342,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     switch (status.toLowerCase()) {
       case 'accepted':
       case 'confirmed':
-        return 'Received';
+        return 'In Transit';
       case 'received':
         return 'In Transit';
       case 'in transit':
@@ -925,14 +926,27 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    driverName,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.3,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          driverName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 7),
+                                      DriverVerifiedBadge(
+                                        driverId: driverId,
+                                        compact: true,
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 6),
                                   if (driverEmail.isNotEmpty)
